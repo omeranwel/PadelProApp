@@ -7,7 +7,7 @@ import SkeletonCard from '../components/ui/SkeletonCard';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Badge from '../components/ui/Badge';
-import { mockCourts } from '../data/mockCourts';
+import { useCourtsStore } from '../store/courtsStore';
 
 const Courts = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -18,10 +18,10 @@ const Courts = () => {
     rating45Plus: false
   });
   
+  const { courts, loading: storeLoading, fetchCourts } = useCourtsStore();
   const [isLoading, setIsLoading] = useState(true);
   React.useEffect(() => {
-    const t = setTimeout(() => setIsLoading(false), 400);
-    return () => clearTimeout(t);
+    fetchCourts().finally(() => setIsLoading(false));
   }, []);
 
   const [sortOpen, setSortOpen] = useState(false);
@@ -45,7 +45,7 @@ const Courts = () => {
   ];
 
   const filteredCourts = useMemo(() => {
-    let courts = [...mockCourts].filter(court => {
+    let list = [...courts].filter(court => {
       const matchesSearch = court.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                            court.area.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesSurface = filters.surface === 'All' || court.surface === filters.surface;
@@ -54,12 +54,12 @@ const Courts = () => {
       
       return matchesSearch && matchesSurface && matchesPrice && matchesRating;
     });
-    return courts.sort((a, b) => {
+    return list.sort((a, b) => {
       if (sortBy === 'priceLow') return a.pricePerHour - b.pricePerHour;
       if (sortBy === 'priceHigh') return b.pricePerHour - a.pricePerHour;
-      return b.rating - a.rating; // default to rating or distance if we had coords
+      return (b.rating || 0) - (a.rating || 0);
     });
-  }, [searchQuery, filters, sortBy]);
+  }, [courts, searchQuery, filters, sortBy]);
 
   return (
     <PageWrapper>
