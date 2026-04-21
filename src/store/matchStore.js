@@ -1,8 +1,10 @@
 import { create } from 'zustand';
-import { mockPlayers } from '../data/mockPlayers';
+import { playerService } from '../services/playerService';
 
 export const useMatchStore = create((set) => ({
-  suggestions: mockPlayers,
+  suggestions: [],
+  loading: false,
+  error: null,
   filters: {
     skillRange: [0, 3], // Beginner to Pro
     lookingFor: 'Both',
@@ -12,11 +14,27 @@ export const useMatchStore = create((set) => ({
   sentRequests: [], // Added to fix ReferenceError reading 'includes'
   
   setFilters: (newFilters) => set((state) => ({ filters: { ...state.filters, ...newFilters } })),
-  sendRequest: (playerId) => {
-    // mock send request
-    set((state) => ({ 
-      requests: [...state.requests, { type: 'sent', to: playerId, status: 'pending' }],
-      sentRequests: [...state.sentRequests, playerId]
-    }));
+  
+  fetchSuggestions: async () => {
+    set({ loading: true, error: null });
+    try {
+      // Typically you'd pass filters to the service, mapping them as DTO.
+      const data = await playerService.getPlayers();
+      set({ suggestions: data, loading: false });
+    } catch (err) {
+      set({ error: err.message, loading: false });
+    }
+  },
+
+  sendRequest: async (playerId) => {
+    try {
+      await playerService.sendRequest(playerId);
+      set((state) => ({ 
+        requests: [...state.requests, { type: 'sent', to: playerId, status: 'pending' }],
+        sentRequests: [...state.sentRequests, playerId]
+      }));
+    } catch (err) {
+      console.error(err);
+    }
   }
 }));

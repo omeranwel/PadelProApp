@@ -11,9 +11,15 @@ import Badge from '../components/ui/Badge';
 import Input from '../components/ui/Input';
 import Card from '../components/ui/Card';
 import Avatar from '../components/ui/Avatar';
-import { mockPosts } from '../data/mockPosts';
+import { useCommunityStore } from '../store/communityStore';
 
 const Community = () => {
+  const { posts, fetchPosts, loading } = useCommunityStore();
+
+  React.useEffect(() => {
+    fetchPosts();
+  }, [fetchPosts]);
+
   const [activeTab, setActiveTab] = useState('Feed');
   const [activeForumTopic, setActiveForumTopic] = useState(null);
   const tabs = ['Feed', 'Forums', 'Blogs', 'Newsletter'];
@@ -105,7 +111,7 @@ const Community = () => {
                      </div>
                   </Card>
                   <div className="space-y-6">
-                    {mockPosts.map((post) => (
+                    {posts.map((post) => (
                       <CommunityCard key={post.id} post={post} />
                     ))}
                   </div>

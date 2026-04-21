@@ -17,11 +17,12 @@ const AuthModal = () => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    phone: '',
     password: '',
+    confirmPassword: '',
     role: 'Player',
     skillLevel: 'beginner'
   });
@@ -44,12 +45,18 @@ const AuthModal = () => {
       setErrors({ otp: 'Please enter the full 6-digit code' });
       return;
     }
+    // We strictly check for '123456' as a mock OTP for the demo environment
+    if (otp.join('') !== '123456') {
+      setErrors({ otp: 'Invalid OTP code. For demo, use 123456' });
+      return;
+    }
     setLoading(true);
     clearError();
     const result = await register({
       name: formData.name,
       email: formData.email,
       password: formData.password,
+      phone: formData.phone,
       role: formData.role?.toUpperCase() || 'PLAYER',
       skillLevel: formData.skillLevel || 'beginner'
     });
@@ -63,8 +70,18 @@ const AuthModal = () => {
   const handleStep1Continue = () => {
     const newErrors = {};
     if (!formData.name.trim()) newErrors.name = 'Name is required';
-    if (!formData.email.trim() || !formData.email.includes('@')) newErrors.email = 'Valid email required';
+    
+    // Strict email check
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!formData.email.trim() || !emailRegex.test(formData.email)) newErrors.email = 'Valid email required';
+    
+    // Phone validation
+    const phoneRegex = /^[\d\s\-\+\(\)]{10,15}$/;
+    if (!formData.phone.trim() || !phoneRegex.test(formData.phone)) newErrors.phone = 'Valid 10-15 digit phone number required';
+
     if (!formData.password || formData.password.length < 8) newErrors.password = 'Password must be at least 8 characters';
+    if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
+    
     if (Object.keys(newErrors).length > 0) { setErrors(newErrors); return; }
     setErrors({});
     setStep(2);
@@ -145,7 +162,7 @@ const AuthModal = () => {
               <div>
                 <Input 
                   label="Full Name" 
-                  placeholder="Sharjeel Chandna" 
+                  placeholder="Enter your full name" 
                   icon={User} 
                   value={formData.name}
                   onChange={e => setFormData({...formData, name: e.target.value})}
@@ -162,13 +179,17 @@ const AuthModal = () => {
                 />
                 {errors.email && <p className="text-danger text-xs mt-1">{errors.email}</p>}
               </div>
-              <Input 
-                label="Phone Number" 
-                placeholder="0300 1234567" 
-                icon={Phone} 
-                className="flex-1"
-                onChange={() => {}} // simplified
-              />
+              <div>
+                 <Input 
+                   label="Phone Number" 
+                   placeholder="+92 300 1234567" 
+                   icon={Phone} 
+                   className="flex-1"
+                   value={formData.phone}
+                   onChange={e => setFormData({...formData, phone: e.target.value})}
+                 />
+                 {errors.phone && <p className="text-danger text-xs mt-1">{errors.phone}</p>}
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Input label="Password" type="password" placeholder="••••••••" icon={Lock} value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
@@ -193,7 +214,10 @@ const AuthModal = () => {
                     </div>
                   )}
                 </div>
-                <Input label="Confirm" type="password" placeholder="••••••••" icon={Lock} />
+                <div>
+                  <Input label="Confirm" type="password" placeholder="••••••••" icon={Lock} value={formData.confirmPassword} onChange={e => setFormData({...formData, confirmPassword: e.target.value})} />
+                  {errors.confirmPassword && <p className="text-danger text-xs mt-1">{errors.confirmPassword}</p>}
+                </div>
               </div>
               <Button onClick={handleStep1Continue} className="w-full">Continue</Button>
             </motion.div>
@@ -248,7 +272,7 @@ const AuthModal = () => {
                 <CheckCircle2 size={40} />
               </div>
               <h4 className="text-2xl font-bold mb-2">Verify Your Number</h4>
-              <p className="text-text-secondary text-sm mb-8">We sent a 6-digit code to +92 300 ••••567</p>
+              <p className="text-text-secondary text-sm mb-8">We sent a 6-digit code to {formData.phone || '+92 ••• •••••••'}</p>
               
               <div className="flex gap-2 justify-center mb-4">
                 {[0,1,2,3,4,5].map(i => (

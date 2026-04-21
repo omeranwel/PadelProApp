@@ -10,18 +10,25 @@ import Input from '../components/ui/Input';
 import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
 import Avatar from '../components/ui/Avatar';
-import { mockPlayers } from '../data/mockPlayers';
+import { useMatchStore } from '../store/matchStore';
 
 const Matches = () => {
   const navigate = useNavigate();
   const [isAiMatching, setIsAiMatching] = useState(false);
   const [showResults, setShowResults] = useState(false);
   
+  const { suggestions, requests, fetchSuggestions, loading } = useMatchStore();
   const [skillFilter, setSkillFilter] = useState([]);
   const [maxDistance, setMaxDistance] = useState(50);
   const [activeTab, setActiveTab] = useState('active');
-  const [receivedRequests, setReceivedRequests] = useState([mockPlayers[3], mockPlayers[5]]);
+  
+  // Real requests feature to be implemented. For now empty placeholders
+  const [receivedRequests, setReceivedRequests] = useState([]);
   const [connectedPlayers, setConnectedPlayers] = useState([]);
+  
+  React.useEffect(() => {
+    fetchSuggestions();
+  }, [fetchSuggestions]);
   
   const [chatPlayer, setChatPlayer] = useState(null);
   const [message, setMessage] = useState('');
@@ -49,13 +56,14 @@ const Matches = () => {
   };
 
   const filteredPlayers = useMemo(() => {
-    return mockPlayers.filter(p => {
+    if (!suggestions || !suggestions.length) return [];
+    return suggestions.filter(p => {
       if (skillFilter.length > 0 && !skillFilter.includes(p.skillLevel.toLowerCase())) return false;
       const dist = Number(p.distance);
       if (dist > maxDistance) return false;
       return true;
     });
-  }, [skillFilter, maxDistance]);
+  }, [skillFilter, maxDistance, suggestions]);
 
   return (
     <PageWrapper>

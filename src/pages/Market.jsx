@@ -8,28 +8,25 @@ import SkeletonCard from '../components/ui/SkeletonCard';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Badge from '../components/ui/Badge';
-import { mockProducts } from '../data/mockProducts';
 import { useMarketStore } from '../store/marketStore';
 
 const Market = () => {
   const navigate = useNavigate();
-  const { savedItems } = useMarketStore();
+  const { savedItems, listings, fetchListings, loading } = useMarketStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filters, setFilters] = useState({ priceMin: 0, priceMax: 50000, conditions: [], sortBy: 'newest' });
   const [showSavedOnly, setShowSavedOnly] = useState(false);
   
-  const [isLoading, setIsLoading] = useState(true);
   React.useEffect(() => {
-    const t = setTimeout(() => setIsLoading(false), 400);
-    return () => clearTimeout(t);
-  }, []);
+    fetchListings();
+  }, [fetchListings]);
   
   const categories = ['All', 'Rackets', 'Balls', 'Shoes', 'Bags', 'Accessories'];
 
   const filteredProducts = useMemo(() => {
-    return mockProducts.filter(item => {
+    return listings.filter(item => {
       const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                            item.description.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = activeCategory === 'All' || item.category === activeCategory;
@@ -125,7 +122,7 @@ const Market = () => {
            </div>
         </div>
 
-        {isLoading ? (
+        {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {Array.from({length:8}).map((_,i) => <SkeletonCard key={i} />)}
           </div>

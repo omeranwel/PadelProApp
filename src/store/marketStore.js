@@ -1,11 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { mockProducts } from '../data/mockProducts';
+import { marketService } from '../services/marketService';
 
 export const useMarketStore = create(
   persist(
     (set) => ({
-      listings: mockProducts,
+      listings: [],
+      loading: false,
+      error: null,
       filters: {
         category: 'All',
         priceMax: 50000,
@@ -31,7 +33,16 @@ export const useMarketStore = create(
             ? state.savedItems.filter(id => id !== productId)
             : [...state.savedItems, productId]
         };
-      })
+      }),
+      fetchListings: async () => {
+        set({ loading: true, error: null });
+        try {
+          const data = await marketService.getListings();
+          set({ listings: data, loading: false });
+        } catch (err) {
+          set({ error: err.message, loading: false });
+        }
+      }
     }),
     {
       name: 'padelpro-market',
