@@ -81,11 +81,11 @@ const Courts = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <div className="hidden md:flex items-center px-4 bg-bg-card border border-border rounded-lg gap-2 cursor-pointer hover:bg-bg-subtle transition-colors">
+            <div className="hidden md:flex items-center px-4 bg-bg-card border border-border rounded-lg gap-2 cursor-pointer hover:bg-bg-subtle transition-colors" onClick={() => alert('Date filtering across all courts will be enabled in v2!')}>
               <Calendar size={18} className="text-accent-blue" />
               <span className="text-sm font-medium">Tomorrow</span>
             </div>
-            <div className="hidden md:flex items-center px-4 bg-bg-card border border-border rounded-lg gap-2 cursor-pointer hover:bg-bg-subtle transition-colors">
+            <div className="hidden md:flex items-center px-4 bg-bg-card border border-border rounded-lg gap-2 cursor-pointer hover:bg-bg-subtle transition-colors" onClick={() => alert('Time-slot filtering across all courts will be enabled in v2!')}>
               <Clock size={18} className="text-accent-blue" />
               <span className="text-sm font-medium">18:00 - 19:00</span>
             </div>

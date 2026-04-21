@@ -206,7 +206,7 @@ const Dashboard = () => {
          {inviteBooking && (
             <div className="space-y-6 text-center">
               <div>
-                <h4 className="font-bold text-lg font-display">{inviteBooking.courtName}</h4>
+                <h4 className="font-bold text-lg font-display">{inviteBooking.court?.name || 'Padel Match'}</h4>
                 <p className="text-sm text-text-secondary">{new Date(inviteBooking.date).toLocaleDateString()} • {inviteBooking.time}</p>
               </div>
               <div className="bg-bg-elevated p-3 rounded-xl border border-border flex items-center justify-between gap-3">
@@ -220,9 +220,9 @@ const Dashboard = () => {
               <div>
                 <p className="text-xs font-bold text-text-muted uppercase mb-4">Or share via:</p>
                 <div className="flex justify-center gap-4">
-                   <button className="w-12 h-12 rounded-full bg-[#25D366]/10 text-[#25D366] flex items-center justify-center hover:bg-[#25D366]/20 transition-all font-bold cursor-pointer" onClick={() => window.open(`https://wa.me/?text=Join me for padel at ${inviteBooking.courtName}`, '_blank')}>W</button>
+                   <button className="w-12 h-12 rounded-full bg-[#25D366]/10 text-[#25D366] flex items-center justify-center hover:bg-[#25D366]/20 transition-all font-bold cursor-pointer" onClick={() => window.open(`https://wa.me/?text=Join me for padel at ${inviteBooking.court?.name || 'Padel Match'}`, '_blank')}>W</button>
                    <button className="w-12 h-12 rounded-full bg-[#E1306C]/10 text-[#E1306C] flex items-center justify-center hover:bg-[#E1306C]/20 transition-all font-bold cursor-pointer" onClick={() => window.open('https://instagram.com', '_blank')}>IG</button>
-                   <button className="w-12 h-12 rounded-full bg-[#1DA1F2]/10 text-[#1DA1F2] flex items-center justify-center hover:bg-[#1DA1F2]/20 transition-all font-bold cursor-pointer" onClick={() => window.open(`https://twitter.com/intent/tweet?text=Join me for padel at ${inviteBooking.courtName}`, '_blank')}>TW</button>
+                   <button className="w-12 h-12 rounded-full bg-[#1DA1F2]/10 text-[#1DA1F2] flex items-center justify-center hover:bg-[#1DA1F2]/20 transition-all font-bold cursor-pointer" onClick={() => window.open(`https://twitter.com/intent/tweet?text=Join me for padel at ${inviteBooking.court?.name || 'Padel Match'}`, '_blank')}>TW</button>
                 </div>
               </div>
             </div>

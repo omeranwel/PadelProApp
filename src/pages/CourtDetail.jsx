@@ -172,7 +172,7 @@ const CourtDetail = () => {
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                    {times.map(t => {
-                     const isBooked = court.slots[selectedDate]?.[t] === 'booked' || Math.random() > 0.8;
+                     const isBooked = court.slots?.[selectedDate]?.[t] === 'booked';
                      const isSelected = selectedSlot === t;
                      return (
                        <button

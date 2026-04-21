@@ -17,6 +17,7 @@ const AuthModal = () => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -39,6 +40,10 @@ const AuthModal = () => {
   };
 
   const handleRegister = async () => {
+    if (otp.join('').length < 6) {
+      setErrors({ otp: 'Please enter the full 6-digit code' });
+      return;
+    }
     setLoading(true);
     clearError();
     const result = await register({
@@ -245,11 +250,23 @@ const AuthModal = () => {
               <h4 className="text-2xl font-bold mb-2">Verify Your Number</h4>
               <p className="text-text-secondary text-sm mb-8">We sent a 6-digit code to +92 300 ••••567</p>
               
-              <div className="flex gap-2 justify-center mb-8">
-                {[1,2,3,4,5,6].map(i => (
-                  <input key={i} className="w-10 h-12 bg-bg-elevated border border-border-strong rounded-lg text-center font-bold text-xl focus:border-accent-blue focus:ring-1" maxLength={1} />
+              <div className="flex gap-2 justify-center mb-4">
+                {[0,1,2,3,4,5].map(i => (
+                  <input 
+                    key={i} 
+                    value={otp[i]}
+                    onChange={e => {
+                      const newOtp = [...otp];
+                      newOtp[i] = e.target.value.substring(e.target.value.length - 1);
+                      setOtp(newOtp);
+                      // auto-advance focus logic can be added here if needed
+                    }}
+                    className="w-10 h-12 bg-bg-elevated border border-border-strong rounded-lg text-center font-bold text-xl focus:border-accent-blue focus:ring-1" 
+                  />
                 ))}
               </div>
+              {errors.otp && <p className="text-danger text-xs mb-4">{errors.otp}</p>}
+              {authError && <p className="text-danger text-xs mb-4">{authError}</p>}
 
               <div className="flex flex-col gap-4">
                 <Button onClick={handleRegister} loading={loading} className="w-full">Create Account</Button>
