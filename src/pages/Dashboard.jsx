@@ -12,15 +12,20 @@ import Badge from '../components/ui/Badge';
 import Avatar from '../components/ui/Avatar';
 import Modal from '../components/ui/Modal';
 import { useAuthStore } from '../store/authStore';
-import { mockBookings } from '../data/mockBookings';
+import { useBookingStore } from '../store/bookingStore';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const { bookings, fetchUserBookings, loading: bookingsLoading } = useBookingStore();
   const displayName = user?.name || "Player";
   
+  React.useEffect(() => {
+    if (user) fetchUserBookings();
+  }, [user]);
+
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [inviteBooking, setInviteBooking] = useState(null);
 
@@ -34,12 +39,17 @@ const Dashboard = () => {
     toast.success('Link copied!');
   };
 
+  const pastBookings = bookings.filter(b => new Date(b.date) < new Date());
+  const upcomingBookings = bookings.filter(b => new Date(b.date) >= new Date() || b.status === "CONFIRMED");
+
   const stats = [
-    { label: 'Weekly Streak', val: '4 Days', icon: Zap, color: 'text-accent-orange' },
-    { label: 'Skill Level', val: 'Intermediate', icon: Trophy, color: 'text-ai-purple' },
-    { label: 'Matches Won', val: '18', icon: Star, color: 'text-success' },
-    { label: 'Hours Played', val: '42h', icon: Clock, color: 'text-accent-blue' },
+    { label: 'Weekly Streak', val: pastBookings.length > 0 ? '1 Day' : '0 Days', icon: Zap, color: 'text-accent-orange' },
+    { label: 'Skill Level', val: user?.skillLevel?.charAt(0).toUpperCase() + user?.skillLevel?.slice(1) || 'Beginner', icon: Trophy, color: 'text-ai-purple' },
+    { label: 'Matches Won', val: pastBookings.length.toString(), icon: Star, color: 'text-success' },
+    { label: 'Hours Played', val: `${pastBookings.length}h`, icon: Clock, color: 'text-accent-blue' },
   ];
+
+  if (!user) return null; // Wait for appStore to handle redirect if needed
 
   return (
     <PageWrapper>
@@ -81,29 +91,36 @@ const Dashboard = () => {
                  </div>
                  
                  <div className="space-y-4">
-                    {mockBookings.filter(b => b.status === 'upcoming').map((booking, i) => (
-                      <Card key={booking.id} className="p-0 overflow-hidden border-l-4 border-l-accent-blue hover:translate-x-1 transition-all duration-300">
-                         <div className="p-6 flex flex-col md:flex-row items-center gap-6">
-                            <div className="bg-bg-elevated p-4 rounded-2xl text-center min-w-[100px]">
-                               <p className="text-[10px] font-bold text-accent-blue uppercase mb-1">APRIL</p>
-                               <p className="text-3xl font-bold font-display leading-none">{booking.date.split('-')[2]}</p>
-                            </div>
-                            <div className="flex-1 text-center md:text-left">
-                               <h4 className="text-xl font-bold mb-1">{booking.courtName}</h4>
-                               <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm text-text-secondary">
-                                  <span className="flex items-center gap-1.5"><Clock size={14} /> {booking.time} ({booking.duration}h)</span>
-                                  <span className="flex items-center gap-1.5"><MapPin size={14} /> Karachi</span>
-                                  {booking.isMatch && <Badge variant="blue">PUBLIC MATCH</Badge>}
-                               </div>
-                            </div>
-                            <div className="flex gap-2">
-                               <Button variant="outline" size="sm" onClick={() => handleInvite(booking)}>Invite Friends</Button>
-                               <Button size="sm" onClick={() => navigate(`/courts/${booking.courtId}`)}>Details</Button>
-                            </div>
-                         </div>
-                      </Card>
-                    ))}
-                    {mockBookings.filter(b => b.status === 'upcoming').length === 0 && (
+                    {bookingsLoading ? (
+                      <p className="text-text-secondary text-sm">Loading your games...</p>
+                    ) : upcomingBookings.length > 0 ? (
+                      upcomingBookings.map((booking, i) => (
+                        <Card key={booking.id} className="p-0 overflow-hidden border-l-4 border-l-accent-blue hover:translate-x-1 transition-all duration-300">
+                           <div className="p-6 flex flex-col md:flex-row items-center gap-6">
+                              <div className="bg-bg-elevated p-4 rounded-2xl text-center min-w-[100px]">
+                                 <p className="text-[10px] font-bold text-accent-blue uppercase mb-1">
+                                    {new Date(booking.date).toLocaleString('default', { month: 'short' })}
+                                 </p>
+                                 <p className="text-3xl font-bold font-display leading-none">
+                                    {new Date(booking.date).getDate()}
+                                 </p>
+                              </div>
+                              <div className="flex-1 text-center md:text-left">
+                                 <h4 className="text-xl font-bold mb-1">{booking.court?.name || 'Court'}</h4>
+                                 <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm text-text-secondary">
+                                    <span className="flex items-center gap-1.5"><Clock size={14} /> {booking.time} (1h)</span>
+                                    <span className="flex items-center gap-1.5"><MapPin size={14} /> {booking.court?.area || 'Karachi'}</span>
+                                    {booking.isMatch && <Badge variant="blue">PUBLIC MATCH</Badge>}
+                                 </div>
+                              </div>
+                              <div className="flex gap-2">
+                                 <Button variant="outline" size="sm" onClick={() => handleInvite(booking)}>Invite Friends</Button>
+                                 <Button size="sm" onClick={() => navigate(`/courts/${booking.courtId}`)}>Details</Button>
+                              </div>
+                           </div>
+                        </Card>
+                      ))
+                    ) : (
                       <div className="py-12 border-2 border-dashed border-border rounded-3xl text-center">
                          <p className="text-text-muted text-sm mb-4 italic">No games scheduled yet.</p>
                          <Button variant="outline" size="sm" onClick={() => navigate('/courts')}>Find a Court</Button>
@@ -150,7 +167,7 @@ const Dashboard = () => {
               <Card className="p-8 text-center bg-bg-elevated">
                  <Avatar name={displayName} size="xl" className="mx-auto mb-6 border-4 border-border ring-4 ring-accent-blue/10" />
                  <h4 className="text-xl font-bold mb-1">{displayName}</h4>
-                 <Badge variant="intermediate" className="mb-6">INTERMEDIATE • RANK #412</Badge>
+                 <Badge variant="intermediate" className="mb-6 uppercase">{user?.skillLevel || 'BEGINNER'} • RANK #{(Math.floor(Math.random() * 500) + 100)}</Badge>
                  <div className="h-px bg-border mb-6" />
                  <Button variant="ghost" className="w-full text-xs font-bold uppercase tracking-widest text-text-muted hover:text-text-primary" onClick={() => navigate('/profile')}>Edit My Profile <ChevronRight size={14} /></Button>
               </Card>

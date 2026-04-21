@@ -1,18 +1,16 @@
 import { api } from './api';
 
 export const bookingService = {
-  createBooking: async (bookingData) => {
-    const data = await api.post('/bookings', bookingData);
-    return {
-      success: true,
-      bookingRef: data.bookingRef,
-      booking: data
-    };
+  getUserBookings: async () => {
+    return await api.get('/bookings');
+  },
+  
+  getBookingById: async (id) => {
+    return await api.get(`/bookings/${id}`);
   },
 
-  getUserBookings: async (tab) => {
-    // tab: upcoming | past | cancelled
-    return await api.get(`/bookings?status=${tab}`);
+  createBooking: async (bookingData) => {
+    return await api.post('/bookings', bookingData);
   },
 
   cancelBooking: async (id) => {
