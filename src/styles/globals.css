@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg-base: #09090F;
+  --color-bg-card: #111118;
+  --color-bg-elevated: #1A1A28;
+  --color-bg-subtle: #1E1E2E;
+  
+  --color-border: #2A2A3E;
+  --color-border-strong: #3A3A55;
+  
+  --color-text-primary: #F0F0FF;
+  --color-text-secondary: #9898B8;
+  --color-text-muted: #5A5A7A;
+  
+  --color-accent-blue: #3B82F6;
+  --color-accent-blue-glow: rgba(59, 130, 246, 0.15);
+  
+  --color-accent-orange: #F97316;
+  --color-accent-orange-glow: rgba(249, 115, 22, 0.15);
+  
+  --color-success: #10B981;
+  --color-danger: #EF4444;
+  --color-warning: #F59E0B;
+  
+  --color-ai-purple: #8B5CF6;
+  --color-ai-purple-glow: rgba(139, 92, 246, 0.15);
+
+  --font-display: "Outfit", sans-serif;
+  --font-body: "DM Sans", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+@layer base {
+  *, ::after, ::before {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-bg-base text-text-primary font-body antialiased;
+    margin: 0;
+    padding: 0;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+}
+
+/* Base interactive resets */
+button, a {
+  cursor: pointer;
+  outline: none;
+}
+
+button:focus-visible, a:focus-visible, input:focus-visible {
+  box-shadow: 0 0 0 3px var(--color-accent-blue-glow);
+}
+
+input, textarea, select {
+  @apply font-body bg-bg-elevated border-border rounded-lg text-text-primary;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-base);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}

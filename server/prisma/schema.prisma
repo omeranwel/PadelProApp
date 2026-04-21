@@ -1,0 +1,283 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  PLAYER
+  CLUB_ADMIN
+  APP_ADMIN
+}
+
+enum SkillLevel {
+  beginner
+  intermediate
+  advanced
+  professional
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  PENDING
+}
+
+model User {
+  id              String    @id @default(uuid())
+  name            String
+  email           String    @unique
+  passwordHash    String
+  phone           String?   @unique
+  role            Role      @default(PLAYER)
+  skillLevel      SkillLevel @default(beginner)
+  bio             String?
+  avatarUrl       String?
+  preferredArea   String?
+  isVerified      Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  bookings        Booking[]
+  listings        Listing[]
+  sentRequests    MatchRequest[] @relation("SentRequests")
+  receivedRequests MatchRequest[] @relation("ReceivedRequests")
+  posts           Post[]
+  sentMessages    Message[]      @relation("SentMessages")
+  notifications   Notification[]
+  reviews         Review[]
+  savedListings   SavedListing[]
+  clubCourts      Court[]        @relation("ClubOwner")
+
+  @@map("users")
+}
+
+model Court {
+  id            String    @id @default(uuid())
+  name          String
+  clubName      String
+  address       String
+  area          String
+  lat           Float
+  lng           Float
+  surface       String    // "Indoor" | "Outdoor"
+  amenities     String[]
+  pricePerHour  Int       // in PKR
+  description   String?
+  isActive      Boolean   @default(true)
+  ownerId       String
+  owner         User      @relation("ClubOwner", fields: [ownerId], references: [id])
+  images        CourtImage[]
+  bookings      Booking[]
+  reviews       Review[]
+  availability  Availability[]
+  createdAt     DateTime  @default(now())
+
+  @@map("courts")
+}
+
+model CourtImage {
+  id        String  @id @default(uuid())
+  courtId   String
+  court     Court   @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  url       String
+  isPrimary Boolean @default(false)
+
+  @@map("court_images")
+}
+
+model Availability {
+  id        String   @id @default(uuid())
+  courtId   String
+  court     Court    @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  date      String   // "yyyy-MM-dd"
+  startTime String   // "08:00"
+  endTime   String   // "09:00"
+  isBooked  Boolean  @default(false)
+
+  @@unique([courtId, date, startTime])
+  @@map("availability")
+}
+
+model Booking {
+  id            String        @id @default(uuid())
+  bookingRef    String        @unique @default(cuid())
+  playerId      String
+  player        User          @relation(fields: [playerId], references: [id])
+  courtId       String
+  court         Court         @relation(fields: [courtId], references: [id])
+  date          String        // "yyyy-MM-dd"
+  startTime     String        // "18:00"
+  duration      Int           // hours
+  totalAmount   Int           // PKR
+  paymentMethod String        // "card" | "cash"
+  status        BookingStatus @default(CONFIRMED)
+  createdAt     DateTime      @default(now())
+
+  @@map("bookings")
+}
+
+model MatchRequest {
+  id          String             @id @default(uuid())
+  senderId    String
+  sender      User               @relation("SentRequests", fields: [senderId], references: [id])
+  receiverId  String
+  receiver    User               @relation("ReceivedRequests", fields: [receiverId], references: [id])
+  message     String?
+  status      String             @default("pending") // pending | accepted | declined | expired
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@map("match_requests")
+}
+
+model Listing {
+  id            String           @id @default(uuid())
+  title         String
+  category      String
+  condition     String
+  price         Int?             // null = open to trade
+  openToTrade   Boolean          @default(false)
+  description   String
+  location      String
+  views         Int              @default(0)
+  isActive      Boolean          @default(true)
+  sellerId      String
+  seller        User             @relation(fields: [sellerId], references: [id])
+  images        ListingImage[]
+  savedBy       SavedListing[]
+  offers        Offer[]
+  createdAt     DateTime         @default(now())
+  expiresAt     DateTime         // 30 days from creation
+
+  @@map("listings")
+}
+
+model ListingImage {
+  id        String  @id @default(uuid())
+  listingId String
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  url       String
+  isPrimary Boolean @default(false)
+
+  @@map("listing_images")
+}
+
+model SavedListing {
+  userId    String
+  user      User    @relation(fields: [userId], references: [id])
+  listingId String
+  listing   Listing @relation(fields: [listingId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@id([userId, listingId])
+  @@map("saved_listings")
+}
+
+model Offer {
+  id        String   @id @default(uuid())
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id])
+  buyerId   String
+  price     Int
+  message   String?
+  status    String   @default("pending") // pending | accepted | declined
+  createdAt DateTime @default(now())
+
+  @@map("offers")
+}
+
+model Post {
+  id        String   @id @default(uuid())
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  type      String   // feed | forum | blog | event | tip
+  title     String?
+  content   String
+  category  String?
+  coverUrl  String?
+  likes     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  replies   Reply[]
+
+  @@map("posts")
+}
+
+model Reply {
+  id        String   @id @default(uuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId  String
+  content   String
+  likes     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@map("replies")
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  courtId   String
+  court     Court    @relation(fields: [courtId], references: [id])
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  rating    Int      // 1–5
+  comment   String?
+  createdAt DateTime @default(now())
+
+  @@map("reviews")
+}
+
+model Conversation {
+  id           String    @id @default(uuid())
+  participant1 String
+  participant2 String
+  messages     Message[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([participant1, participant2])
+  @@map("conversations")
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  senderId       String
+  sender         User         @relation("SentMessages", fields: [senderId], references: [id])
+  content        String
+  isRead         Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+
+  @@map("messages")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      String   // "match_request" | "booking" | "marketplace" | "community"
+  message   String
+  isRead    Boolean  @default(false)
+  link      String?  // frontend route to navigate to
+  createdAt DateTime @default(now())
+
+  @@map("notifications")
+}
+
+model OtpCode {
+  id        String   @id @default(uuid())
+  phone     String
+  code      String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("otp_codes")
+}
