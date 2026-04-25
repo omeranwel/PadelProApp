@@ -19,7 +19,7 @@
     "cloudinary": "^1.41.0",
     "cors": "latest",
     "express": "latest",
-    "express-rate-limit": "latest",
+    "express-rate-limit": "^8.4.1",
     "helmet": "latest",
     "jsonwebtoken": "latest",
     "morgan": "latest",
@@ -27,7 +27,8 @@
     "multer-storage-cloudinary": "^4.0.0",
     "node-cache": "latest",
     "nodemailer": "latest",
-    "socket.io": "latest",
+    "sanitize-html": "^2.17.3",
+    "socket.io": "^4.8.3",
     "zod": "latest"
   },
   "devDependencies": {

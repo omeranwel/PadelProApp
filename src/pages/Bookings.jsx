@@ -10,7 +10,9 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import ReviewModal from '../components/features/ReviewModal';
-import { mockBookings } from '../data/mockBookings';
+import Modal from '../components/ui/Modal';
+import Input from '../components/ui/Input';
+import { courtService } from '../services/courtService';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
@@ -19,12 +21,50 @@ const Bookings = () => {
   const [filter, setFilter] = useState('upcoming');
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [reviewBooking, setReviewBooking] = useState(null);
+  
+  const [bookings, setBookings] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filteredBookings = mockBookings.filter(b => b.status === filter);
+  React.useEffect(() => {
+    setIsLoading(true);
+    courtService.getUserBookings(filter).then(res => {
+      setBookings(res.data || res);
+      setIsLoading(false);
+    }).catch(() => setIsLoading(false));
+  }, [filter]);
+
+  const filteredBookings = bookings;
 
   const handleReview = (booking) => {
     setReviewBooking(booking);
     setReviewModalOpen(true);
+  };
+
+  const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
+  const [rescheduleBookingTarget, setRescheduleBookingTarget] = useState(null);
+  const [newDate, setNewDate] = useState('');
+  const [newTime, setNewTime] = useState('');
+  const [isRescheduling, setIsRescheduling] = useState(false);
+
+  const handleOpenReschedule = (booking) => {
+    setRescheduleBookingTarget(booking);
+    setNewDate(booking.date);
+    setNewTime(booking.time);
+    setRescheduleModalOpen(true);
+  };
+
+  const submitReschedule = async () => {
+    if (!newDate || !newTime) return toast.error('Select date and time');
+    setIsRescheduling(true);
+    try {
+      await courtService.rescheduleBooking(rescheduleBookingTarget.id, newDate, newTime);
+      toast.success('Booking rescheduled successfully!');
+      setRescheduleModalOpen(false);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to reschedule. Time might be occupied.');
+    } finally {
+      setIsRescheduling(false);
+    }
   };
 
   const handleCancelRequest = (id) => {
@@ -69,7 +109,11 @@ const Bookings = () => {
 
         {/* Content */}
         <div className="space-y-6">
-           {filteredBookings.length > 0 ? (
+           {isLoading ? (
+             Array(3).fill(0).map((_, i) => (
+                <div key={i} className="p-8 bg-bg-card border border-border rounded-3xl animate-pulse h-48"></div>
+             ))
+           ) : filteredBookings.length > 0 ? (
              filteredBookings.map((booking, i) => (
                <motion.div
                 key={booking.id}
@@ -117,10 +161,10 @@ const Bookings = () => {
                        </div>
 
                        {/* Ticket Actions */}
-                       <div className="flex flex-row lg:flex-col justify-end lg:justify-between gap-3 min-w-[160px] pt-6 lg:pt-0 lg:pl-8 lg:border-l border-border">
+                        <div className="flex flex-row lg:flex-col justify-end lg:justify-between gap-3 min-w-[160px] pt-6 lg:pt-0 lg:pl-8 lg:border-l border-border">
                           {booking.status === 'upcoming' ? (
                             <>
-                               <Button className="w-full flex-1 lg:flex-none" icon={Calendar}>Reschedule</Button>
+                               <Button className="w-full flex-1 lg:flex-none" icon={Calendar} onClick={() => handleOpenReschedule(booking)}>Reschedule</Button>
                                <Button variant="secondary" size="sm" className="w-full flex-1 lg:flex-none" onClick={() => handleCancelRequest(booking.id)}>Request Cancel</Button>
                             </>
                           ) : (
@@ -163,6 +207,34 @@ const Bookings = () => {
         onClose={() => setReviewModalOpen(false)} 
         booking={reviewBooking} 
       />
+      <Modal isOpen={rescheduleModalOpen} onClose={() => setRescheduleModalOpen(false)} title="Reschedule Booking">
+        {rescheduleBookingTarget && (
+          <div className="space-y-4">
+             <p className="text-sm text-text-secondary">Current: {new Date(rescheduleBookingTarget.date).toLocaleDateString()} at {rescheduleBookingTarget.time}</p>
+             <Input 
+               label="New Date" 
+               type="date" 
+               value={newDate} 
+               onChange={(e) => setNewDate(e.target.value)} 
+               min={new Date().toISOString().split('T')[0]}
+             />
+             <div className="space-y-2">
+                <label className="text-sm font-bold">New Time</label>
+                <select 
+                  className="w-full bg-bg-elevated border border-border rounded-xl px-4 py-3 text-sm focus:border-accent-blue outline-none text-text-primary"
+                  value={newTime}
+                  onChange={(e) => setNewTime(e.target.value)}
+                >
+                  <option value="">Select Time</option>
+                  {['08:00', '09:00', '16:00', '17:00', '18:00', '19:00', '20:00'].map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+             </div>
+             <Button className="w-full mt-4" loading={isRescheduling} onClick={submitReschedule}>Confirm Reschedule</Button>
+          </div>
+        )}
+      </Modal>
     </PageWrapper>
   );
 };

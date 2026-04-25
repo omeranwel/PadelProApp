@@ -12,6 +12,7 @@ import Badge from '../components/ui/Badge';
 import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
 import { mockCourts } from '../data/mockCourts';
+import { courtService } from '../services/courtService';
 import toast from 'react-hot-toast';
 
 const CourtDetail = () => {
@@ -34,6 +35,19 @@ const CourtDetail = () => {
   const [duration, setDuration] = useState(1);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [bookingConfirmed, setBookingConfirmed] = useState(null);
+  const [bookingStep, setBookingStep] = useState('select');
+  const [selectedPayment, setSelectedPayment] = useState('card');
+  const [slots, setSlots] = useState({});
+
+  React.useEffect(() => {
+    if (court?.id && selectedDate) {
+      courtService.getAvailability(court.id, selectedDate)
+        .then(res => setSlots(res.data || res))
+        .catch(err => setSlots({}));
+    }
+  }, [court?.id, selectedDate]);
 
   const times = [
     "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", 
@@ -45,7 +59,38 @@ const CourtDetail = () => {
       toast.error('Please select a time slot first');
       return;
     }
+    setBookingStep('select');
     setIsBookingModalOpen(true);
+  };
+
+  const handleConfirmBooking = async () => {
+    setBookingLoading(true);
+    try {
+      const result = await courtService.createBooking({
+        courtId: court.id,
+        date: selectedDate,
+        startTime: selectedSlot,
+        duration,
+        paymentMethod: selectedPayment
+      });
+      setBookingConfirmed(result.data || result);
+      setBookingStep('success');
+    } catch (err) {
+      const status = err.response?.status;
+      if (status === 409) {
+        toast.error('This slot was just booked by someone else. Please pick another time.');
+        setSelectedSlot(null); // reset slot selection
+        setIsBookingModalOpen(false); // Can close modal to let them select
+        // Re-fetch availability to show updated state
+        const fresh = await courtService.getAvailability(court.id, selectedDate);
+        setSlots(fresh.data || fresh);
+      } else {
+        toast.error(err.response?.data?.error || 'Booking failed. Please try again.');
+      }
+      setBookingStep('select'); // go back to slot selection
+    } finally {
+      setBookingLoading(false);
+    }
   };
 
   const amenities = [
@@ -165,14 +210,14 @@ const CourtDetail = () => {
               </div>
 
               {/* Time Grid */}
-              {(!court.slots || !court.slots[selectedDate] || Object.keys(court.slots[selectedDate] || {}).length === 0) ? (
+              {Object.keys(slots).length === 0 && !court.slots?.[selectedDate] ? (
                 <div className="py-12 text-center bg-bg-card border border-border rounded-2xl flex items-center justify-center">
                   <p className="text-text-secondary font-medium">No slots available for this date — try another day.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                    {times.map(t => {
-                     const isBooked = court.slots?.[selectedDate]?.[t] === 'booked';
+                     const isBooked = slots?.[t] === 'booked' || court.slots?.[selectedDate]?.[t] === 'booked';
                      const isSelected = selectedSlot === t;
                      return (
                        <button
@@ -276,51 +321,53 @@ const CourtDetail = () => {
         className="max-w-md"
       >
         <div className="space-y-8">
-           <div className="bg-bg-elevated p-8 rounded-3xl border border-dashed border-border-strong text-center relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-2 bg-accent-orange text-white text-[10px] font-bold uppercase rotate-45 translate-x-3 -translate-y-1 w-20">TICKET</div>
-              <h4 className="text-2xl font-bold font-display mb-1">{court.name}</h4>
-              <p className="text-text-secondary text-sm mb-6">{court.area}, Karachi</p>
-              
-              <div className="grid grid-cols-2 gap-4 text-left border-t border-border pt-6">
-                <div>
-                  <p className="text-[10px] text-text-muted font-bold uppercase">Date</p>
-                  <p className="text-sm font-bold">{new Date(selectedDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-text-muted font-bold uppercase">Time</p>
-                  <p className="text-sm font-bold">{selectedSlot}</p>
-                </div>
-              </div>
-              
-              <div className="mt-8 pt-8 border-t border-border flex items-center justify-between">
-                 <div className="flex flex-col items-start">
-                   <p className="text-[10px] text-text-muted font-bold uppercase">Booking ID</p>
-                   <p className="font-mono text-xs font-bold">#PK-PDL-9281</p>
-                 </div>
-                 <div className="h-10 w-10 bg-text-primary rounded-md flex items-center justify-center overflow-hidden">
-                    {/* Fake QR code */}
-                    <div className="grid grid-cols-3 gap-0.5">
-                       {[...Array(9)].map((_, i) => <div key={i} className={`w-2 h-2 ${Math.random() > 0.5 ? 'bg-bg-base' : 'bg-transparent'}`} />)}
+           {bookingStep === 'select' ? (
+             <>
+               <div className="bg-bg-elevated p-8 rounded-3xl border border-dashed border-border-strong text-center relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-2 bg-accent-orange text-white text-[10px] font-bold uppercase rotate-45 translate-x-3 -translate-y-1 w-20">TICKET</div>
+                  <h4 className="text-2xl font-bold font-display mb-1">{court.name}</h4>
+                  <p className="text-text-secondary text-sm mb-6">{court.area}, Karachi</p>
+                  
+                  <div className="grid grid-cols-2 gap-4 text-left border-t border-border pt-6">
+                    <div>
+                      <p className="text-[10px] text-text-muted font-bold uppercase">Date</p>
+                      <p className="text-sm font-bold">{new Date(selectedDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
                     </div>
-                 </div>
-              </div>
-           </div>
-
-           <div className="space-y-4">
-             <div className="flex flex-col gap-2">
-               <p className="text-sm font-bold">Select Payment Method</p>
-               <div className="grid grid-cols-2 gap-3">
-                 <button className="flex items-center justify-center p-3 rounded-xl border-2 border-accent-blue bg-accent-blue/5 text-sm font-bold text-accent-blue">💳 Card</button>
-                 <button className="flex items-center justify-center p-3 rounded-xl border border-border text-sm font-bold text-text-secondary">💵 Cash</button>
+                    <div>
+                      <p className="text-[10px] text-text-muted font-bold uppercase">Time</p>
+                      <p className="text-sm font-bold">{selectedSlot}</p>
+                    </div>
+                  </div>
                </div>
+
+               <div className="space-y-4">
+                 <div className="flex flex-col gap-2">
+                   <p className="text-sm font-bold">Select Payment Method</p>
+                   <div className="grid grid-cols-2 gap-3">
+                     <button onClick={() => setSelectedPayment('card')} className={`flex items-center justify-center p-3 rounded-xl border-2 transition-all text-sm font-bold ${selectedPayment === 'card' ? 'border-accent-blue bg-accent-blue/5 text-accent-blue' : 'border-border text-text-secondary'}`}>💳 Card</button>
+                     <button onClick={() => setSelectedPayment('cash')} className={`flex items-center justify-center p-3 rounded-xl border-2 transition-all text-sm font-bold ${selectedPayment === 'cash' ? 'border-accent-blue bg-accent-blue/5 text-accent-blue' : 'border-border text-text-secondary'}`}>💵 Cash</button>
+                   </div>
+                 </div>
+                 
+                 <Button className="w-full mt-4" loading={bookingLoading} disabled={bookingLoading} onClick={handleConfirmBooking}>
+                   Pay & Confirm Booking
+                 </Button>
+               </div>
+             </>
+           ) : (
+             <div className="text-center py-8 space-y-6">
+               <div className="w-20 h-20 bg-success/20 text-success rounded-full flex items-center justify-center mx-auto">
+                 <Check size={40} />
+               </div>
+               <div>
+                 <h4 className="text-2xl font-bold mb-2">Booking Confirmed!</h4>
+                 <p className="text-text-secondary">Your court is booked for {selectedSlot}. Have a great game!</p>
+               </div>
+               <Button className="w-full" onClick={() => { setIsBookingModalOpen(false); navigate('/dashboard'); }}>
+                 Go to Dashboard
+               </Button>
              </div>
-             
-             <Button className="w-full mt-4" onClick={() => {
-                toast.success('Booking Successful! Check your dashboard.');
-                setIsBookingModalOpen(false);
-                navigate('/dashboard');
-             }}>Pay & Confirm Booking</Button>
-           </div>
+           )}
         </div>
       </Modal>
     </PageWrapper>

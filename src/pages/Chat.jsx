@@ -6,24 +6,65 @@ import Avatar from '../components/ui/Avatar';
 import Badge from '../components/ui/Badge';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
-import { mockPlayers } from '../data/mockPlayers';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { chatService } from '../services/chatService';
+import { getSocket } from '../services/socketService';
+import { useAuthStore } from '../store/authStore';
+import { formatDistanceToNow } from 'date-fns';
 
 const Chat = () => {
-  const [activeChat, setActiveChat] = useState(mockPlayers[0]);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuthStore();
+  const [conversations, setConversations] = useState([]);
+  const [activeConvoId, setActiveConvoId] = useState(new URLSearchParams(location.search).get('conversation') || null);
+  const activeConvo = conversations.find(c => c.id === activeConvoId) || null;
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState([
-    { text: "Hey! Are we still on for tomorrow's match?", sender: 'them', time: '10:30 AM' },
-    { text: "Yes, definitely. 7 PM at Padel Arena right?", sender: 'me', time: '10:35 AM' },
-    { text: "Perfect. See you there!", sender: 'them', time: '10:36 AM' }
-  ]);
+  const [messages, setMessages] = useState([]);
 
-  const handleSend = () => {
-    if (!message.trim()) return;
-    setMessages([...messages, { text: message, sender: 'me', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
-    setMessage('');
-    setTimeout(() => {
-      setMessages(prev => [...prev, { text: "Got it!", sender: 'them', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
-    }, 1000);
+  React.useEffect(() => {
+    chatService.getConversations().then(res => {
+      setConversations(res.data || res);
+    });
+  }, []);
+
+  React.useEffect(() => {
+    if (activeConvoId) {
+      chatService.getMessages(activeConvoId).then(res => {
+        setMessages((res.data || res).reverse()); // newest last
+      });
+    }
+  }, [activeConvoId]);
+
+  React.useEffect(() => {
+    const socket = getSocket();
+    if (socket) {
+      const handleMsg = (msg) => {
+        if (msg.conversationId === activeConvoId) {
+          setMessages(prev => [...prev, msg]);
+        }
+        setConversations(prev => {
+          const arr = [...prev];
+          const idx = arr.findIndex(c => c.id === msg.conversationId);
+          if (idx !== -1) {
+            const [c] = arr.splice(idx, 1);
+            arr.unshift(c);
+          }
+          return arr;
+        });
+      };
+      socket.on('new_message', handleMsg);
+      return () => socket.off('new_message', handleMsg);
+    }
+  }, [activeConvoId]);
+
+  const handleSend = async () => {
+    if (!message.trim() || !activeConvoId) return;
+    try {
+      const res = await chatService.sendMessage(activeConvoId, message);
+      setMessages(prev => [...prev, res.data || res]);
+      setMessage('');
+    } catch(err) {}
   };
 
   return (
@@ -44,20 +85,19 @@ const Chat = () => {
               </div>
             </div>
             <div className="flex-1 overflow-y-auto no-scrollbar">
-               {mockPlayers.slice(0, 5).map((player, i) => (
+               {conversations.map((convo, i) => (
                  <div 
-                   key={player.id} 
-                   onClick={() => setActiveChat(player)}
-                   className={`p-4 flex items-center gap-4 cursor-pointer transition-colors border-b border-border ${activeChat?.id === player.id ? 'bg-bg-elevated' : 'hover:bg-bg-subtle'}`}
+                   key={convo.id} 
+                   onClick={() => setActiveConvoId(convo.id)}
+                   className={`p-4 flex items-center gap-4 cursor-pointer transition-colors border-b border-border ${activeConvoId === convo.id ? 'bg-bg-elevated' : 'hover:bg-bg-subtle'}`}
                  >
                     <div className="relative">
-                      <Avatar name={player.name} size="md" />
+                      <Avatar name={convo.name} size="md" />
                       {i < 2 && <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-success rounded-full border-2 border-bg-card" />}
                     </div>
                     <div className="flex-1 min-w-0">
                        <div className="flex justify-between items-center mb-1">
-                          <h5 className="font-bold text-sm truncate">{player.name}</h5>
-                          <span className="text-[10px] text-text-muted">10:30 AM</span>
+                          <h5 className="font-bold text-sm truncate">{convo.partner?.name}</h5>
                        </div>
                        <p className="text-xs text-text-secondary truncate">
                          {i === 0 ? "Perfect. See you there!" : "Sounds good."}
@@ -69,17 +109,17 @@ const Chat = () => {
           </div>
 
           {/* Main Chat Area */}
-          {activeChat ? (
+          {activeConvo ? (
             <Card className="flex-1 flex flex-col p-0 overflow-hidden h-full">
                <div className="p-6 border-b border-border bg-bg-card flex justify-between items-center z-10 shrink-0">
                   <div className="flex items-center gap-4">
-                     <Avatar name={activeChat.name} size="md" />
+                     <Avatar name={activeConvo.partner?.name} size="md" />
                      <div>
-                        <h4 className="font-bold flex items-center gap-2">{activeChat.name}</h4>
+                        <h4 className="font-bold flex items-center gap-2">{activeConvo.partner?.name}</h4>
                         <div className="flex items-center gap-2 text-xs text-text-secondary">
                           <span className="w-2 h-2 rounded-full bg-success animate-pulse" /> Online
                           <span className="px-1 text-border">•</span>
-                          <Badge variant={activeChat.skillLevel} className="!text-[10px] !py-0 !px-1.5">{activeChat.skillLevel.toUpperCase()}</Badge>
+                          {activeConvo.partner?.skillLevel && <Badge variant={activeConvo.partner.skillLevel} className="!text-[10px] !py-0 !px-1.5">{activeConvo.partner.skillLevel.toUpperCase()}</Badge>}
                         </div>
                      </div>
                   </div>
@@ -94,14 +134,17 @@ const Chat = () => {
                   <div className="text-center">
                      <span className="text-xs font-bold text-text-muted bg-bg-elevated px-3 py-1 rounded-full border border-border">Today</span>
                   </div>
-                  {messages.map((msg, i) => (
-                    <div key={i} className={`flex flex-col max-w-[70%] ${msg.sender === 'me' ? 'self-end items-end ml-auto' : 'self-start items-start'} relative group`}>
-                       <div className={`p-4 rounded-2xl text-sm shadow-sm ${msg.sender === 'me' ? 'bg-accent-blue text-white rounded-tr-sm' : 'bg-bg-elevated border border-border rounded-tl-sm text-text-primary'}`}>
-                          {msg.text}
-                       </div>
-                       <span className="text-[10px] text-text-muted mt-1 opacity-0 group-hover:opacity-100 transition-opacity absolute -bottom-4">{msg.time}</span>
-                    </div>
-                  ))}
+                  {messages.map((msg, i) => {
+                    const isMe = msg.senderId === user?.id;
+                    return (
+                      <div key={msg.id || i} className={`flex flex-col max-w-[70%] ${isMe ? 'self-end items-end ml-auto' : 'self-start items-start'} relative group`}>
+                         <div className={`p-4 rounded-2xl text-sm shadow-sm ${isMe ? 'bg-accent-blue text-white rounded-tr-sm' : 'bg-bg-elevated border border-border rounded-tl-sm text-text-primary'}`}>
+                            {msg.content || msg.text}
+                         </div>
+                         <span className="text-[10px] text-text-muted mt-1 opacity-0 group-hover:opacity-100 transition-opacity absolute -bottom-4">{msg.createdAt ? formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true }) : msg.time}</span>
+                      </div>
+                    );
+                  })}
                </div>
 
                <div className="p-4 border-t border-border bg-bg-card flex gap-3 items-center shrink-0">
@@ -116,10 +159,22 @@ const Chat = () => {
                </div>
             </Card>
           ) : (
-            <Card className="flex-[2] flex flex-col items-center justify-center text-text-muted">
-               <MessageSquare size={48} className="mb-4 opacity-20" />
-               <p>Select a conversation to start chatting</p>
-            </Card>
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-bg-elevated rounded-full flex items-center justify-center mx-auto mb-4">
+                  <MessageSquare size={28} className="text-text-muted" />
+                </div>
+                <h3 className="font-semibold mb-2">No conversation selected</h3>
+                <p className="text-sm text-text-secondary">
+                  {conversations.length === 0
+                    ? 'No conversations yet — accept a match request to start chatting.'
+                    : 'Select a conversation from the list'}
+                </p>
+                {conversations.length === 0 && (
+                  <Button className="mt-4" onClick={() => navigate('/matches')}>Find Match Partners</Button>
+                )}
+              </div>
+            </div>
           )}
         </div>
       </div>

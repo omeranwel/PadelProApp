@@ -11,18 +11,23 @@ import Badge from '../components/ui/Badge';
 import Input from '../components/ui/Input';
 import Card from '../components/ui/Card';
 import Avatar from '../components/ui/Avatar';
-import { useCommunityStore } from '../store/communityStore';
+import { communityService } from '../services/communityService';
 
 const Community = () => {
-  const { posts, fetchPosts, loading } = useCommunityStore();
-
-  React.useEffect(() => {
-    fetchPosts();
-  }, [fetchPosts]);
-
   const [activeTab, setActiveTab] = useState('Feed');
   const [activeForumTopic, setActiveForumTopic] = useState(null);
   const tabs = ['Feed', 'Forums', 'Blogs', 'Newsletter'];
+  
+  const [posts, setPosts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  React.useEffect(() => {
+    setIsLoading(true);
+    communityService.getPosts(activeTab.toLowerCase()).then(res => {
+      setPosts(res.data || res);
+      setIsLoading(false);
+    }).catch(() => setIsLoading(false));
+  }, [activeTab]);
 
   const forumtopics = [
     { title: 'Best beginner racket under 20k?', replies: 42, activity: '5m' },
@@ -111,9 +116,33 @@ const Community = () => {
                      </div>
                   </Card>
                   <div className="space-y-6">
-                    {posts.map((post) => (
-                      <CommunityCard key={post.id} post={post} />
-                    ))}
+                    {isLoading ? (
+                      Array(3).fill(0).map((_, idx) => (
+                         <div key={idx} className="p-6 bg-bg-card border border-border rounded-2xl animate-pulse">
+                            <div className="flex items-center gap-4 mb-4">
+                               <div className="w-10 h-10 bg-bg-elevated rounded-full"></div>
+                               <div className="space-y-2">
+                                  <div className="h-3 bg-bg-elevated w-24 rounded"></div>
+                                  <div className="h-2 bg-bg-elevated w-16 rounded"></div>
+                               </div>
+                            </div>
+                            <div className="space-y-3">
+                               <div className="h-4 bg-bg-elevated w-full rounded"></div>
+                               <div className="h-4 bg-bg-elevated w-5/6 rounded"></div>
+                               <div className="h-4 bg-bg-elevated w-4/6 rounded"></div>
+                            </div>
+                         </div>
+                      ))
+                    ) : posts.length === 0 ? (
+                      <div className="py-12 border border-dashed border-border rounded-xl text-center text-text-secondary">
+                        <MessageSquare size={32} className="mx-auto mb-4 opacity-50" />
+                        <p>No posts available. Be the first to share something!</p>
+                      </div>
+                    ) : (
+                      posts.map((post) => (
+                        <CommunityCard key={post.id} post={post} />
+                      ))
+                    )}
                   </div>
                   <div className="py-8 flex justify-center">
                      <Button variant="ghost" className="text-accent-blue font-bold">Show More Activity</Button>

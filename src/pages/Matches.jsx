@@ -11,13 +11,17 @@ import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
 import Avatar from '../components/ui/Avatar';
 import { useMatchStore } from '../store/matchStore';
+import { useAuthStore } from '../store/authStore';
+import { playerService } from '../services/playerService';
+import toast from 'react-hot-toast';
 
 const Matches = () => {
   const navigate = useNavigate();
   const [isAiMatching, setIsAiMatching] = useState(false);
   const [showResults, setShowResults] = useState(false);
   
-  const { suggestions, requests, fetchSuggestions, loading } = useMatchStore();
+  const { suggestions, requests, fetchSuggestions, loading, addRequest } = useMatchStore();
+  const { isLoggedIn } = useAuthStore();
   const [skillFilter, setSkillFilter] = useState([]);
   const [maxDistance, setMaxDistance] = useState(50);
   const [activeTab, setActiveTab] = useState('active');
@@ -29,6 +33,29 @@ const Matches = () => {
   React.useEffect(() => {
     fetchSuggestions();
   }, [fetchSuggestions]);
+
+  React.useEffect(() => {
+    if (isLoggedIn) {
+      playerService.getRequests('received').then(res => {
+        setReceivedRequests(res.data || res);
+      });
+      playerService.getRequests('sent').then(res => {
+        const data = res.data || res;
+        data.forEach(r => { if (!requests.find(x => x.id === r.id)) addRequest(r); });
+      });
+    }
+  }, [isLoggedIn, requests, addRequest]);
+
+  const handleAccept = async (requestId) => {
+    try {
+      const res = await playerService.updateRequest(requestId, 'accepted');
+      const result = res.data || res;
+      toast.success('Match accepted!');
+      if (result.conversationId) navigate(`/chat?conversation=${result.conversationId}`);
+    } catch(err) {
+      toast.error('Failed to accept request.');
+    }
+  };
   
   const [chatPlayer, setChatPlayer] = useState(null);
   const [message, setMessage] = useState('');
@@ -226,10 +253,7 @@ const Matches = () => {
                         key={p.id} 
                         player={p} 
                         isRequest={true}
-                        onAccept={() => {
-                          setReceivedRequests(prev => prev.filter(r => r.id !== p.id));
-                          setConnectedPlayers(prev => [...prev, p]);
-                        }}
+                        onAccept={() => handleAccept(p.id)}
                         onDecline={() => setReceivedRequests(prev => prev.filter(r => r.id !== p.id))}
                       />
                    ))}

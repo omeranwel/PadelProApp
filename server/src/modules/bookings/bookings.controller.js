@@ -37,3 +37,13 @@ export const cancelBooking = async (req, res, next) => {
     next(err);
   }
 };
+
+export const rescheduleBooking = async (req, res, next) => {
+  try {
+    const { date, startTime } = req.body;
+    const result = await service.rescheduleBooking(req.params.id, req.user.id, { date, startTime });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+};

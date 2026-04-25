@@ -17,5 +17,17 @@ export const courtService = {
 
   addReview: async (id, reviewData) => {
     return await api.post(`/courts/${id}/reviews`, reviewData);
+  },
+
+  createBooking: async (data) => {
+    return await api.post('/bookings', data);
+  },
+
+  rescheduleBooking: async (id, newDate, newTime) => {
+    return await api.patch(`/bookings/${id}/reschedule`, { date: newDate, startTime: newTime });
+  },
+
+  getUserBookings: async (status = 'upcoming') => {
+    return await api.get(`/bookings?status=${status}`);
   }
 };

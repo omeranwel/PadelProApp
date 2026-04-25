@@ -1,19 +1,43 @@
 import React from 'react';
-import { NavLink, Link } from 'react-router-dom';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, Menu, X, User } from 'lucide-react';
+import { Bell, Menu, X, User, Search } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useAppStore } from '../../store/appStore';
+import { notificationService } from '../../services/notificationService';
+import { initSocket, disconnectSocket, getSocket } from '../../services/socketService';
+import SearchModal from '../features/SearchModal';
 import Button from '../ui/Button';
 import Avatar from '../ui/Avatar';
+import { formatDistanceToNow } from 'date-fns';
 
 const Navbar = () => {
   const { isLoggedIn, user, logout } = useAuthStore();
-  const { openAuthModal } = useAppStore();
+  const { openAuthModal, notifications, unreadCount, setNotifications, markAllRead } = useAppStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [notifOpen, setNotifOpen] = React.useState(false);
+  const [searchOpen, setSearchOpen] = React.useState(false);
   const notifRef = React.useRef();
+  const navigate = useNavigate();
+
+  React.useEffect(() => {
+    if (isLoggedIn) {
+      notificationService.getAll().then(setNotifications).catch(() => {});
+      
+      const token = localStorage.getItem('accessToken');
+      if (token) {
+        const socket = initSocket(token);
+        socket.on('new_notification', (notif) => {
+          useAppStore.getState().addNotification(notif);
+        });
+      }
+    } else {
+      disconnectSocket();
+    }
+    
+    return () => disconnectSocket();
+  }, [isLoggedIn, setNotifications]);
 
   React.useEffect(() => {
     const handleScroll = () => {
@@ -36,6 +60,13 @@ const Navbar = () => {
     { name: 'Market', path: '/market' },
     { name: 'Community', path: '/community' },
   ];
+
+  const handleMarkAllRead = async () => {
+    try {
+      await notificationService.markAllRead();
+      markAllRead();
+    } catch(err) {}
+  };
 
   return (
     <nav className={`
@@ -87,6 +118,13 @@ const Navbar = () => {
 
         {/* Auth Actions */}
         <div className="flex items-center gap-4">
+          <button 
+             onClick={() => setSearchOpen(true)}
+             className="p-2 text-text-secondary hover:text-text-primary transition-colors hover:scale-110"
+          >
+            <Search size={20} />
+          </button>
+          
           {isLoggedIn ? (
             <>
               <div className="relative" ref={notifRef}>
@@ -95,7 +133,7 @@ const Navbar = () => {
                   className="relative p-2 text-text-secondary hover:text-text-primary transition-colors"
                 >
                   <Bell size={20} />
-                  {!notifOpen && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-accent-orange rounded-full" />}
+                  {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-accent-orange rounded-full flex items-center justify-center"><span className="absolute text-[8px] font-bold text-white leading-none scale-75">{unreadCount}</span></span>}
                 </button>
                 <AnimatePresence>
                   {notifOpen && (
@@ -107,31 +145,26 @@ const Navbar = () => {
                     >
                       <div className="flex justify-between items-center p-4 border-b border-border">
                         <h4 className="font-bold">Notifications</h4>
-                        <button className="text-xs text-accent-blue hover:text-accent-orange transition-colors">Mark all read</button>
+                        {unreadCount > 0 && (
+                          <button onClick={handleMarkAllRead} className="text-xs text-accent-blue hover:text-accent-orange transition-colors">Mark all read</button>
+                        )}
                       </div>
                       <div className="max-h-[300px] overflow-y-auto">
-                        {/* Empty State could be shown if length === 0 */}
-                        <div className="p-4 border-b border-border hover:bg-bg-subtle transition-colors flex gap-3 cursor-pointer">
-                           <div className="w-2 h-2 bg-accent-blue rounded-full shrink-0 mt-1.5" />
-                           <div>
-                             <p className="text-sm font-medium">Your booking at Padel Arena DHA is confirmed for tomorrow 7PM</p>
-                             <span className="text-xs text-text-muted mt-1 block">2 min ago</span>
-                           </div>
-                        </div>
-                        <div className="p-4 border-b border-border hover:bg-bg-subtle transition-colors flex gap-3 cursor-pointer">
-                           <div className="w-2 h-2 bg-purple-500 rounded-full shrink-0 mt-1.5" />
-                           <div>
-                             <p className="text-sm font-medium">Ali Hassan sent you a match request</p>
-                             <span className="text-xs text-text-muted mt-1 block">1 hour ago</span>
-                           </div>
-                        </div>
-                        <div className="p-4 hover:bg-bg-subtle transition-colors flex gap-3 cursor-pointer">
-                           <div className="w-2 h-2 bg-accent-orange rounded-full shrink-0 mt-1.5" />
-                           <div>
-                             <p className="text-sm font-medium">Your listing 'Babolat Viper' has 12 new views</p>
-                             <span className="text-xs text-text-muted mt-1 block">3 hours ago</span>
-                           </div>
-                        </div>
+                        {notifications.length === 0 ? (
+                           <div className="p-8 text-center text-text-muted text-sm border-b border-border">No notifications yet.</div>
+                        ) : (
+                          notifications.map((n) => (
+                            <div key={n.id} onClick={() => n.link && navigate(n.link)} className={`p-4 border-b border-border hover:bg-bg-subtle transition-colors flex gap-3 cursor-pointer ${!n.read && !n.isRead ? 'bg-bg-subtle' : ''}`}>
+                               <div className={`w-2 h-2 rounded-full shrink-0 mt-1.5 ${!n.read && !n.isRead ? 'bg-accent-blue' : 'bg-transparent'}`} />
+                               <div>
+                                 <p className={`text-sm ${!n.read && !n.isRead ? 'font-bold text-text-primary' : 'font-medium text-text-secondary'}`}>{n.message}</p>
+                                 <span className="text-xs text-text-muted mt-1 block">
+                                   {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
+                                 </span>
+                               </div>
+                            </div>
+                          ))
+                        )}
                       </div>
                     </motion.div>
                   )}
@@ -207,6 +240,8 @@ const Navbar = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
     </nav>
   );
 };

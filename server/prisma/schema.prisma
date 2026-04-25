@@ -52,6 +52,7 @@ model User {
   reviews         Review[]
   savedListings   SavedListing[]
   clubCourts      Court[]        @relation("ClubOwner")
+  refreshTokens   RefreshToken[]
 
   @@map("users")
 }
@@ -280,4 +281,15 @@ model OtpCode {
   createdAt DateTime @default(now())
 
   @@map("otp_codes")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("refresh_tokens")
 }

@@ -8,5 +8,6 @@ router.post('/', verifyToken, ctrl.createBooking);
 router.get('/', verifyToken, ctrl.getUserBookings);
 router.get('/:id', verifyToken, ctrl.getBookingById);
 router.patch('/:id/cancel', verifyToken, ctrl.cancelBooking);
+router.patch('/:id/reschedule', verifyToken, ctrl.rescheduleBooking);
 
 export default router;

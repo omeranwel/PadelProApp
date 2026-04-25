@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Mail, Lock, User, Phone, CheckCircle2 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useAppStore } from '../../store/appStore';
+import { authService } from '../../services/authService';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
@@ -17,6 +18,7 @@ const AuthModal = () => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [otp, setOtp] = useState(['','','','','','']);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -32,38 +34,45 @@ const AuthModal = () => {
     if (!formData.email || !formData.password) return;
     setLoading(true);
     clearError();
-    const result = await login(formData.email, formData.password);
-    setLoading(false);
-    if (result.success) {
+    try {
+      const result = await authService.login(formData.email, formData.password);
+      useAuthStore.setState({ user: result.user, token: result.token, refreshToken: result.refreshToken, isLoggedIn: true, authError: null });
       closeAuthModal();
       if (intendedPath) { navigate(intendedPath); clearIntendedPath(); }
+    } catch(err) {
+      useAuthStore.setState({ authError: err.response?.data?.error || err.message || 'Login failed.' });
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleRegister = async () => {
     if (otp.join('').length < 6) {
-      setErrors({ otp: 'Please enter the full 6-digit code' });
+      setErrors({ ...errors, otp: 'Please enter the full 6-digit code' });
       return;
     }
     // We strictly check for '123456' as a mock OTP for the demo environment
     if (otp.join('') !== '123456') {
-      setErrors({ otp: 'Invalid OTP code. For demo, use 123456' });
+      setErrors({ ...errors, otp: 'Invalid OTP code. For demo, use 123456' });
       return;
     }
     setLoading(true);
     clearError();
-    const result = await register({
-      name: formData.name,
-      email: formData.email,
-      password: formData.password,
-      phone: formData.phone,
-      role: formData.role?.toUpperCase() || 'PLAYER',
-      skillLevel: formData.skillLevel || 'beginner'
-    });
-    setLoading(false);
-    if (result.success) {
+    try {
+      const { confirmPassword, ...registerPayload } = formData;
+      const result = await authService.register({
+        ...registerPayload,
+        role: registerPayload.role?.toUpperCase() || 'PLAYER',
+        skillLevel: registerPayload.skillLevel || 'beginner'
+      });
+      useAuthStore.setState({ user: result.user, token: result.token, refreshToken: result.refreshToken, isLoggedIn: true, authError: null });
       closeAuthModal();
       if (intendedPath) { navigate(intendedPath); clearIntendedPath(); }
+    } catch (err) {
+      const message = err.response?.data?.error || err.message || 'Registration failed. Please try again.';
+      setErrors({ ...errors, submit: message });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -290,6 +299,7 @@ const AuthModal = () => {
                 ))}
               </div>
               {errors.otp && <p className="text-danger text-xs mb-4">{errors.otp}</p>}
+              {errors.submit && <p className="text-danger text-sm font-medium mb-4 bg-danger/10 border border-danger/30 rounded p-2">{errors.submit}</p>}
               {authError && <p className="text-danger text-xs mb-4">{authError}</p>}
 
               <div className="flex flex-col gap-4">

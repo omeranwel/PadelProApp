@@ -20,7 +20,7 @@ export const login = async (req, res, next) => {
 
 export const logout = async (req, res, next) => {
   try {
-    await authService.logout(req.user.id);
+    await authService.logout(req.user.id, req.body.refreshToken);
     res.json({ message: 'Logged out successfully' });
   } catch (err) {
     next(err);

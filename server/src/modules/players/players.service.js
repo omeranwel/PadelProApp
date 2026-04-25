@@ -1,6 +1,7 @@
 import prisma from '../../config/db.js';
 import { calculateCompatibility } from '../../utils/compatibility.js';
 import { formatDistanceToNow } from 'date-fns';
+import { safeUserSelect } from '../../utils/userSelect.js';
 
 const skillRankMap = {
   beginner: 0,
@@ -25,12 +26,13 @@ export const getPlayers = async (requestingUserId, filters = {}) => {
 
   const players = await prisma.user.findMany({
     where,
-    include: {
+    select: {
+      ...safeUserSelect,
       bookings: { where: { status: 'COMPLETED' } }
     }
   });
 
-  const requestingUser = await prisma.user.findUnique({ where: { id: requestingUserId } });
+  const requestingUser = await prisma.user.findUnique({ where: { id: requestingUserId }, select: safeUserSelect });
   const reqSkillRank = skillRankMap[requestingUser.skillLevel] || 0;
 
   const result = players.map(p => {
@@ -83,7 +85,10 @@ export const getPlayers = async (requestingUserId, filters = {}) => {
 export const getPlayerById = async (id) => {
   const p = await prisma.user.findUnique({
     where: { id },
-    include: { bookings: true }
+    select: {
+      ...safeUserSelect,
+      bookings: true
+    }
   });
   if (!p) return null;
 
@@ -99,7 +104,8 @@ export const updateProfile = async (id, data) => {
   const { name, bio, preferredArea, skillLevel } = data;
   return await prisma.user.update({
     where: { id },
-    data: { name, bio, preferredArea, skillLevel }
+    data: { name, bio, preferredArea, skillLevel },
+    select: safeUserSelect
   });
 };
 
@@ -107,6 +113,7 @@ export const uploadAvatar = async (id, file) => {
   const avatarUrl = file.path || '/mock-avatars/player-1.jpg';
   return await prisma.user.update({
     where: { id },
-    data: { avatarUrl }
+    data: { avatarUrl },
+    select: safeUserSelect
   });
 };

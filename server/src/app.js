@@ -16,6 +16,7 @@ import communityRoutes from './modules/community/community.routes.js';
 import chatRoutes from './modules/chat/chat.routes.js';
 import notificationRoutes from './modules/notifications/notifications.routes.js';
 import chatbotRoutes from './modules/chatbot/chatbot.routes.js';
+import searchRoutes from './modules/search/search.routes.js';
 // ... other imports will be added as we build modules
 
 const app = express();
@@ -30,6 +31,16 @@ app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 200, message: 'Too many reque
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date() }));
 
 // Mount Auth
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: 'Too many login attempts. Try again in 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/courts', courtRoutes);
 app.use('/api/bookings', bookingRoutes);
@@ -40,6 +51,7 @@ app.use('/api/posts', communityRoutes);
 app.use('/api/conversations', chatRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/chatbot', chatbotRoutes);
+app.use('/api/search', searchRoutes);
 
 // Error Handling
 app.use(errorHandler);

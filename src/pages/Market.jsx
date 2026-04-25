@@ -9,10 +9,14 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Badge from '../components/ui/Badge';
 import { useMarketStore } from '../store/marketStore';
+import { marketService } from '../services/marketService';
 
 const Market = () => {
   const navigate = useNavigate();
-  const { savedItems, listings, fetchListings, loading } = useMarketStore();
+  const { savedItems } = useMarketStore();
+  const [listings, setListings] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -20,8 +24,12 @@ const Market = () => {
   const [showSavedOnly, setShowSavedOnly] = useState(false);
   
   React.useEffect(() => {
-    fetchListings();
-  }, [fetchListings]);
+    setIsLoading(true);
+    marketService.getListings(filters).then(res => {
+      setListings(res.data || res);
+      setIsLoading(false);
+    }).catch(() => setIsLoading(false));
+  }, [filters]);
   
   const categories = ['All', 'Rackets', 'Balls', 'Shoes', 'Bags', 'Accessories'];
 
@@ -122,7 +130,7 @@ const Market = () => {
            </div>
         </div>
 
-        {loading ? (
+        {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {Array.from({length:8}).map((_,i) => <SkeletonCard key={i} />)}
           </div>

@@ -89,7 +89,12 @@ export const sendMessage = async (conversationId, senderId, content) => {
 
   // Emit socket
   if (io) {
-    io.to(`conversation:${conversationId}`).emit('message:new', message);
+    const convo = await prisma.conversation.findUnique({ where: { id: conversationId } });
+    if (convo) {
+      const partnerId = convo.participant1 === senderId ? convo.participant2 : convo.participant1;
+      io.to(`user:${partnerId}`).emit('new_message', message);
+      io.to(`user:${senderId}`).emit('new_message', message);
+    }
   }
 
   return message;
