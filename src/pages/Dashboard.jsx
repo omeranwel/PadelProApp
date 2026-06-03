@@ -9,6 +9,7 @@ import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import Avatar from '../components/ui/Avatar';
 import LogResultModal from '../components/features/LogResultModal';
+import PlayerReviewModal from '../components/features/PlayerReviewModal';
 import { useAuthStore } from '../store/authStore';
 import { useBookingStore } from '../store/bookingStore';
 import { playerService } from '../services/playerService';
@@ -47,6 +48,9 @@ const Dashboard = () => {
   const [stats, setStats] = useState(null);
   const [loadingStats, setLoadingStats] = useState(true);
   const [logMatchOpen, setLogMatchOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewOpponent, setReviewOpponent] = useState(null);
+  const [reviewMatchId, setReviewMatchId] = useState(null);
 
   useEffect(() => {
     if (user) {
@@ -265,8 +269,23 @@ const Dashboard = () => {
 
       <LogResultModal
         isOpen={logMatchOpen}
-        onClose={() => { setLogMatchOpen(false); refreshStats(); }}
+        onClose={(opponent, matchId) => {
+          setLogMatchOpen(false);
+          refreshStats();
+          if (opponent) {
+            setReviewOpponent(opponent);
+            setReviewMatchId(matchId);
+            setReviewOpen(true);
+          }
+        }}
         connectedPlayers={[]}
+      />
+
+      <PlayerReviewModal
+        isOpen={reviewOpen}
+        onClose={() => setReviewOpen(false)}
+        opponent={reviewOpponent}
+        matchId={reviewMatchId}
       />
     </PageWrapper>
   );

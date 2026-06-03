@@ -29,6 +29,7 @@ const LogResultModal = ({ isOpen, onClose, connectedPlayers = [] }) => {
   const [sets, setSets] = useState([{ me: 6, them: 3 }]);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [loggedMatchId, setLoggedMatchId] = useState(null);
 
   const reset = () => {
     setStep(STEP_OPPONENT);
@@ -36,10 +37,16 @@ const LogResultModal = ({ isOpen, onClose, connectedPlayers = [] }) => {
     setOpponentSearch('');
     setSets([{ me: 6, them: 3 }]);
     setResult(null);
+    setLoggedMatchId(null);
     setLoading(false);
   };
 
-  const handleClose = () => { reset(); onClose(); };
+  const handleClose = () => {
+    const opp = opponent;
+    const mId = loggedMatchId;
+    reset();
+    onClose(opp, mId);
+  };
 
   const filteredPlayers = connectedPlayers.filter(p =>
     p.name?.toLowerCase().includes(opponentSearch.toLowerCase())
@@ -68,6 +75,7 @@ const LogResultModal = ({ isOpen, onClose, connectedPlayers = [] }) => {
       });
       const data = res.data || res;
       setResult({ won: iWon, ratingChange: data.ratingChange || null });
+      setLoggedMatchId(data.matchId || data.id || null);
       setStep(STEP_RESULT);
     } catch (err) {
       toast.error(err?.response?.data?.error || 'Failed to log match. Try again.');
