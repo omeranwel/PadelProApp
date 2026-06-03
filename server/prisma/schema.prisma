@@ -28,31 +28,59 @@ enum BookingStatus {
 }
 
 model User {
-  id              String    @id @default(uuid())
-  name            String
-  email           String    @unique
-  passwordHash    String
-  phone           String?   @unique
-  role            Role      @default(PLAYER)
-  skillLevel      SkillLevel @default(beginner)
-  bio             String?
-  avatarUrl       String?
-  preferredArea   String?
-  isVerified      Boolean   @default(false)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id                 String    @id @default(uuid())
+  name               String
+  email              String    @unique
+  passwordHash       String
+  phone              String?   @unique
+  role               Role      @default(PLAYER)
+  skillLevel         SkillLevel @default(beginner)
+  skillRating        Float     @default(3.0)
+  bio                String?
+  avatarUrl          String?
+  preferredArea      String?
+  city               String    @default("Karachi")
+  dominantHand       String    @default("right")
+  preferredPosition  String    @default("both")
+  playingStyle       String    @default("all-round")
+  availability       String[]  @default([])
+  maxTravelKm        Int       @default(20)
+  preferredMode      String    @default("both")
+  locationLat        Float?
+  locationLng        Float?
+  matchmakingEnabled Boolean   @default(true)
+  profileComplete    Boolean   @default(false)
+  isVerified         Boolean   @default(false)
+  totalWins          Int       @default(0)
+  totalLosses        Int       @default(0)
+  winRate            Float     @default(0)
+  recentForm         String[]  @default([])
+  currentStreak      Int       @default(0)
+  pointsScored       Int       @default(0)
+  pointsConceded     Int       @default(0)
+  skillRatingHistory Json      @default("[]")
+  lastActive         DateTime  @default(now())
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  bookings        Booking[]
-  listings        Listing[]
-  sentRequests    MatchRequest[] @relation("SentRequests")
-  receivedRequests MatchRequest[] @relation("ReceivedRequests")
-  posts           Post[]
-  sentMessages    Message[]      @relation("SentMessages")
-  notifications   Notification[]
-  reviews         Review[]
-  savedListings   SavedListing[]
-  clubCourts      Court[]        @relation("ClubOwner")
-  refreshTokens   RefreshToken[]
+  bookings            Booking[]
+  listings            Listing[]
+  sentRequests        MatchRequest[] @relation("SentRequests")
+  receivedRequests    MatchRequest[] @relation("ReceivedRequests")
+  posts               Post[]
+  sentMessages        Message[]      @relation("SentMessages")
+  notifications       Notification[]
+  courtReviews        Review[]
+  savedListings       SavedListing[]
+  clubCourts          Court[]         @relation("ClubOwner")
+  reviewsGiven        PlayerReview[]  @relation("ReviewsGiven")
+  reviewsReceived     PlayerReview[]  @relation("ReviewsReceived")
+  club                Club?           @relation("ClubOperator")
+  refreshTokens       RefreshToken[]
+  createdMatches      Match[]        @relation("MatchCreator")
+  player1Matches      Match[]        @relation("Player1")
+  player2Matches      Match[]        @relation("Player2")
+  organizedTournaments Tournament[]  @relation("TournamentOrganizer")
 
   @@map("users")
 }
@@ -63,11 +91,12 @@ model Court {
   clubName      String
   address       String
   area          String
+  city          String    @default("Karachi")
   lat           Float
   lng           Float
-  surface       String    // "Indoor" | "Outdoor"
+  surface       String
   amenities     String[]
-  pricePerHour  Int       // in PKR
+  pricePerHour  Int
   description   String?
   isActive      Boolean   @default(true)
   ownerId       String
@@ -76,6 +105,8 @@ model Court {
   bookings      Booking[]
   reviews       Review[]
   availability  Availability[]
+  matches       Match[]
+  tournaments   Tournament[]
   createdAt     DateTime  @default(now())
 
   @@map("courts")
@@ -95,9 +126,9 @@ model Availability {
   id        String   @id @default(uuid())
   courtId   String
   court     Court    @relation(fields: [courtId], references: [id], onDelete: Cascade)
-  date      String   // "yyyy-MM-dd"
-  startTime String   // "08:00"
-  endTime   String   // "09:00"
+  date      String
+  startTime String
+  endTime   String
   isBooked  Boolean  @default(false)
 
   @@unique([courtId, date, startTime])
@@ -111,15 +142,38 @@ model Booking {
   player        User          @relation(fields: [playerId], references: [id])
   courtId       String
   court         Court         @relation(fields: [courtId], references: [id])
-  date          String        // "yyyy-MM-dd"
-  startTime     String        // "18:00"
-  duration      Int           // hours
-  totalAmount   Int           // PKR
-  paymentMethod String        // "card" | "cash"
+  date          String
+  startTime     String
+  duration      Int
+  totalAmount   Int
+  paymentMethod String        @default("cash")
   status        BookingStatus @default(CONFIRMED)
+  reviewSent    Boolean       @default(false)
   createdAt     DateTime      @default(now())
 
   @@map("bookings")
+}
+
+model Match {
+  id          String   @id @default(uuid())
+  mode        String   @default("singles")
+  player1Id   String
+  player1     User     @relation("Player1", fields: [player1Id], references: [id])
+  player2Id   String?
+  player2     User?    @relation("Player2", fields: [player2Id], references: [id])
+  team1       String[]
+  team2       String[]
+  score       Json     @default("{}")
+  courtId     String?
+  court       Court?   @relation(fields: [courtId], references: [id])
+  date        DateTime @default(now())
+  status      String   @default("completed")
+  createdById String
+  createdBy   User     @relation("MatchCreator", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  playerReviews PlayerReview[]
+
+  @@map("matches")
 }
 
 model MatchRequest {
@@ -129,7 +183,7 @@ model MatchRequest {
   receiverId  String
   receiver    User               @relation("ReceivedRequests", fields: [receiverId], references: [id])
   message     String?
-  status      String             @default("pending") // pending | accepted | declined | expired
+  status      String             @default("pending")
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
 
@@ -141,7 +195,7 @@ model Listing {
   title         String
   category      String
   condition     String
-  price         Int?             // null = open to trade
+  price         Int?
   openToTrade   Boolean          @default(false)
   description   String
   location      String
@@ -153,7 +207,7 @@ model Listing {
   savedBy       SavedListing[]
   offers        Offer[]
   createdAt     DateTime         @default(now())
-  expiresAt     DateTime         // 30 days from creation
+  expiresAt     DateTime
 
   @@map("listings")
 }
@@ -186,7 +240,7 @@ model Offer {
   buyerId   String
   price     Int
   message   String?
-  status    String   @default("pending") // pending | accepted | declined
+  status    String   @default("pending")
   createdAt DateTime @default(now())
 
   @@map("offers")
@@ -196,7 +250,7 @@ model Post {
   id        String   @id @default(uuid())
   authorId  String
   author    User     @relation(fields: [authorId], references: [id])
-  type      String   // feed | forum | blog | event | tip
+  type      String
   title     String?
   content   String
   category  String?
@@ -221,13 +275,62 @@ model Reply {
   @@map("replies")
 }
 
+model PlayerReview {
+  id            String   @id @default(uuid())
+  matchId       String?
+  match         Match?   @relation(fields: [matchId], references: [id])
+  reviewerId    String
+  reviewer      User     @relation("ReviewsGiven", fields: [reviewerId], references: [id])
+  subjectId     String
+  subject       User     @relation("ReviewsReceived", fields: [subjectId], references: [id])
+  sportsmanship Int      @default(3)
+  punctuality   Int      @default(3)
+  skillDisplay  Int      @default(3)
+  communication Int      @default(3)
+  teamwork      Int      @default(3)
+  overallRating Float    @default(3.0)
+  tags          String[]
+  comment       String?
+  createdAt     DateTime @default(now())
+
+  @@unique([reviewerId, subjectId, matchId])
+  @@map("player_reviews")
+}
+
+model Club {
+  id             String   @id @default(uuid())
+  ownerId        String   @unique
+  owner          User     @relation("ClubOperator", fields: [ownerId], references: [id])
+  name           String
+  description    String?
+  logo           String?
+  coverImage     String?
+  address        String
+  area           String
+  city           String   @default("Karachi")
+  contactPhone   String?
+  contactEmail   String?
+  website        String?
+  amenities      String[]
+  operatingHours Json     @default("{}")
+  isApproved     Boolean  @default(false)
+  isActive       Boolean  @default(true)
+  totalCourts    Int      @default(0)
+  totalBookings  Int      @default(0)
+  rating         Float    @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("clubs")
+}
+
 model Review {
   id        String   @id @default(uuid())
   courtId   String
   court     Court    @relation(fields: [courtId], references: [id])
   authorId  String
   author    User     @relation(fields: [authorId], references: [id])
-  rating    Int      // 1–5
+  rating    Int
   comment   String?
   createdAt DateTime @default(now())
 
@@ -263,10 +366,10 @@ model Notification {
   id        String   @id @default(uuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id])
-  type      String   // "match_request" | "booking" | "marketplace" | "community"
+  type      String
   message   String
   isRead    Boolean  @default(false)
-  link      String?  // frontend route to navigate to
+  link      String?
   createdAt DateTime @default(now())
 
   @@map("notifications")
@@ -274,7 +377,7 @@ model Notification {
 
 model OtpCode {
   id        String   @id @default(uuid())
-  phone     String
+  email     String
   code      String
   expiresAt DateTime
   used      Boolean  @default(false)
@@ -292,4 +395,29 @@ model RefreshToken {
   createdAt DateTime @default(now())
 
   @@map("refresh_tokens")
+}
+
+model Tournament {
+  id                   String   @id @default(uuid())
+  name                 String
+  description          String
+  city                 String   @default("Karachi")
+  courtId              String?
+  court                Court?   @relation(fields: [courtId], references: [id])
+  startDate            DateTime
+  endDate              DateTime
+  registrationDeadline DateTime
+  format               String   @default("knockout")
+  skillLevel           String   @default("open")
+  maxParticipants      Int      @default(16)
+  entryFee             Int      @default(0)
+  prizePool            Int      @default(0)
+  participants         String[]
+  bracket              Json?
+  status               String   @default("upcoming")
+  organizerId          String
+  organizer            User     @relation("TournamentOrganizer", fields: [organizerId], references: [id])
+  createdAt            DateTime @default(now())
+
+  @@map("tournaments")
 }

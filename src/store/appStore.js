@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 
+let toastIdCounter = 0;
+
 export const useAppStore = create((set) => ({
   authModalOpen: false,
   authModalTab: 'signin', // 'signin' or 'register'
@@ -7,6 +9,7 @@ export const useAppStore = create((set) => ({
   unreadCount: 0,
   globalLoading: false,
   intendedPath: null,
+  toasts: [],
   
   setIntendedPath: (path) => set({ intendedPath: path }),
   clearIntendedPath: () => set({ intendedPath: null }),
@@ -28,4 +31,12 @@ export const useAppStore = create((set) => ({
   })),
   
   setGlobalLoading: (isLoading) => set({ globalLoading: isLoading }),
+
+  pushToast: (toast, duration = 5000) => {
+    const id = ++toastIdCounter;
+    set((state) => ({ toasts: [...state.toasts, { ...toast, id }] }));
+    if (duration > 0) setTimeout(() => useAppStore.getState().dismissToast(id), duration);
+    return id;
+  },
+  dismissToast: (id) => set((state) => ({ toasts: state.toasts.filter(t => t.id !== id) })),
 }));

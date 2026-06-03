@@ -2,6 +2,7 @@ import http from 'http';
 import app from './src/app.js';
 import prisma from './src/config/db.js';
 import { initSocket } from './src/config/socket.js';
+import { startScheduler } from './src/utils/scheduler.js';
 
 const PORT = process.env.PORT || 3000;
 
@@ -16,6 +17,7 @@ async function start() {
     
     httpServer.listen(PORT, () => {
       console.log(`🚀 PadelPro API running on port ${PORT}`);
+      startScheduler();
     });
   } catch (err) {
     console.error('❌ Failed to start server:', err);

@@ -31,7 +31,7 @@ const Chat = () => {
   React.useEffect(() => {
     if (activeConvoId) {
       chatService.getMessages(activeConvoId).then(res => {
-        setMessages((res.data || res).reverse()); // newest last
+        setMessages(res.data || res); // oldest first (correct chat order)
       });
     }
   }, [activeConvoId]);

@@ -3,8 +3,10 @@ import { io } from 'socket.io-client';
 let socket;
 
 export const initSocket = (token) => {
-  socket = io(import.meta.env.VITE_API_URL || 'http://localhost:3000', {
-    auth: { token }
+  // Connect to same origin — Vite proxy forwards /socket.io to the API server
+  socket = io('', {
+    auth: { token },
+    path: '/socket.io',
   });
 
   socket.on('connect', () => {

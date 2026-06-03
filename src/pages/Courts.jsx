@@ -1,12 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, MapPin, Calendar, Clock, Filter, SlidersHorizontal, Grid, Map as MapIcon, X } from 'lucide-react';
+import { Search, MapPin, Calendar, Clock, Filter, SlidersHorizontal, Grid, Map as MapIcon, X, Zap } from 'lucide-react';
 import PageWrapper from '../components/layout/PageWrapper';
 import CourtCard from '../components/features/CourtCard';
 import SkeletonCard from '../components/ui/SkeletonCard';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Badge from '../components/ui/Badge';
+import LiveAvailabilityGrid from '../components/features/LiveAvailabilityGrid';
 import { useCourtsStore } from '../store/courtsStore';
 
 const Courts = () => {
@@ -120,6 +121,10 @@ const Courts = () => {
             <div className="flex bg-bg-elevated p-1 rounded-lg border border-border">
                <button onClick={() => setView('grid')} className={`p-1.5 rounded-md ${view === 'grid' ? 'bg-bg-card text-accent-blue' : 'text-text-muted'}`}><Grid size={18} /></button>
                <button onClick={() => setView('map')} className={`p-1.5 rounded-md ${view === 'map' ? 'bg-bg-card text-accent-blue' : 'text-text-muted'}`}><MapIcon size={18} /></button>
+               <button onClick={() => setView('live')} title="Live Availability" className={`p-1.5 rounded-md relative ${view === 'live' ? 'bg-bg-card text-accent' : 'text-text-muted hover:text-accent'}`}>
+                 <Zap size={18} />
+                 {view !== 'live' && <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-accent rounded-full animate-pulse" />}
+               </button>
             </div>
             <div className="relative" ref={sortRef}>
               <Button variant="secondary" size="sm" icon={SlidersHorizontal} onClick={() => setSortOpen(!sortOpen)}>
@@ -152,34 +157,40 @@ const Courts = () => {
 
       {/* Main Content */}
       <section id="courts-grid" className="px-6 max-w-7xl mx-auto pb-20 pt-4">
-        <div className="flex items-center justify-between mb-8">
-           <h3 className="font-bold text-text-secondary">Showing <span className="text-text-primary">{filteredCourts.length} courts</span> near Karachi</h3>
-           {searchQuery && (
-             <button onClick={() => setSearchQuery('')} className="flex items-center gap-1 text-sm text-accent-blue font-bold">
-               <X size={14} /> Clear Search
-             </button>
-           )}
-        </div>
-
-        {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {Array.from({length:6}).map((_,i) => <SkeletonCard key={i} />)}
-          </div>
-        ) : filteredCourts.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredCourts.map((court, i) => (
-              <CourtCard key={court.id} court={court} />
-            ))}
-          </div>
+        {view === 'live' ? (
+          <LiveAvailabilityGrid />
         ) : (
-          <div className="py-20 flex flex-col items-center text-center">
-            <div className="w-20 h-20 bg-bg-elevated rounded-full flex items-center justify-center text-text-muted mb-6">
-              <Search size={32} />
+          <>
+            <div className="flex items-center justify-between mb-8">
+               <h3 className="font-bold text-text-secondary">Showing <span className="text-text-primary">{filteredCourts.length} courts</span> near Karachi</h3>
+               {searchQuery && (
+                 <button onClick={() => setSearchQuery('')} className="flex items-center gap-1 text-sm text-accent-blue font-bold">
+                   <X size={14} /> Clear Search
+                 </button>
+               )}
             </div>
-            <h4 className="text-xl font-bold mb-2">No courts found</h4>
-            <p className="text-text-secondary max-w-xs mx-auto mb-8">Try adjusting your filters or search query to find available courts.</p>
-            <Button variant="outline" onClick={() => { setSearchQuery(''); setFilters({surface: 'All', priceRange: [0, 10000], rating: 'Any'}); }}>Reset All Filters</Button>
-          </div>
+
+            {isLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                {Array.from({length:6}).map((_,i) => <SkeletonCard key={i} />)}
+              </div>
+            ) : filteredCourts.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                {filteredCourts.map((court, i) => (
+                  <CourtCard key={court.id} court={court} />
+                ))}
+              </div>
+            ) : (
+              <div className="py-20 flex flex-col items-center text-center">
+                <div className="w-20 h-20 bg-bg-elevated rounded-full flex items-center justify-center text-text-muted mb-6">
+                  <Search size={32} />
+                </div>
+                <h4 className="text-xl font-bold mb-2">No courts found</h4>
+                <p className="text-text-secondary max-w-xs mx-auto mb-8">Try adjusting your filters or search query to find available courts.</p>
+                <Button variant="outline" onClick={() => { setSearchQuery(''); setFilters({surface: 'All', priceRange: [0, 10000], rating: 'Any'}); }}>Reset All Filters</Button>
+              </div>
+            )}
+          </>
         )}
       </section>
     </PageWrapper>

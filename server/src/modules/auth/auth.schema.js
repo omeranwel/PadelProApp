@@ -5,9 +5,7 @@ export const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8).max(100),
   phone: z.string().regex(/^(\+92|0)[0-9]{10}$/).optional(),
-  role: z.enum(['PLAYER', 'CLUB_ADMIN', 'player', 'club_admin'])
-    .transform(v => v.toUpperCase())
-    .default('PLAYER'),
+  role: z.enum(['PLAYER', 'CLUB_ADMIN', 'player', 'club_admin']).transform(v => v.toUpperCase()).default('PLAYER'),
   skillLevel: z.enum(['beginner','intermediate','advanced','professional']).default('beginner'),
   confirmPassword: z.string().optional()
 });
@@ -18,6 +16,6 @@ export const loginSchema = z.object({
 });
 
 export const otpSchema = z.object({
-  phone: z.string(),
+  email: z.string().email(),
   otp: z.string().length(6)
 });

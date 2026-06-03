@@ -1,233 +1,273 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Trophy, Calendar, Users, ShoppingBag, 
-  TrendingUp, TrendingDown, Clock, ChevronRight,
-  Zap, Star, MapPin, Search, Plus
-} from 'lucide-react';
+import { Trophy, Calendar, Users, TrendingUp, Clock, ChevronRight, Zap, Star, MapPin, Plus, Activity, Swords, BarChart2 } from 'lucide-react';
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, PieChart, Pie, Cell } from 'recharts';
+import { format } from 'date-fns';
 import PageWrapper from '../components/layout/PageWrapper';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import Avatar from '../components/ui/Avatar';
-import Modal from '../components/ui/Modal';
+import LogResultModal from '../components/features/LogResultModal';
 import { useAuthStore } from '../store/authStore';
 import { useBookingStore } from '../store/bookingStore';
+import { playerService } from '../services/playerService';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+
+const CustomTooltip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-bg-elevated border border-border-strong rounded-xl px-4 py-3 shadow-xl text-sm">
+      <p className="text-text-muted font-bold mb-1">{label}</p>
+      {payload.map((p, i) => <p key={i} style={{ color: p.color }} className="font-bold">{p.name}: {p.value}</p>)}
+    </div>
+  );
+};
+
+const FormBadge = ({ result }) => (
+  <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ${result === 'W' ? 'bg-accent/10 text-accent border border-accent/20' : 'bg-danger/10 text-danger border border-danger/20'}`}>{result}</span>
+);
+
+const StatCard = ({ label, value, icon: Icon, color, sub }) => (
+  <Card className="p-5 flex flex-col gap-3">
+    <div className="flex items-center justify-between">
+      <span className="text-xs font-bold uppercase tracking-widest text-text-muted">{label}</span>
+      <div className={`w-9 h-9 rounded-xl bg-bg-elevated border border-border flex items-center justify-center ${color}`}><Icon size={18} /></div>
+    </div>
+    <p className="text-3xl font-display">{value}</p>
+    {sub && <p className="text-xs text-text-muted">{sub}</p>}
+  </Card>
+);
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { bookings, fetchUserBookings, loading: bookingsLoading } = useBookingStore();
-  const displayName = user?.name || "Player";
-  
-  React.useEffect(() => {
-    if (user) fetchUserBookings();
+  const [stats, setStats] = useState(null);
+  const [loadingStats, setLoadingStats] = useState(true);
+  const [logMatchOpen, setLogMatchOpen] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      fetchUserBookings();
+      playerService.getMyStats()
+        .then(d => setStats(d?.data || d))
+        .catch(() => {})
+        .finally(() => setLoadingStats(false));
+    }
   }, [user]);
 
-  const [inviteModalOpen, setInviteModalOpen] = useState(false);
-  const [inviteBooking, setInviteBooking] = useState(null);
+  const displayName = user?.name || 'Player';
+  const upcomingBookings = bookings.filter(b => b.status === 'CONFIRMED' || new Date(b.date) >= new Date());
 
-  const handleInvite = (booking) => {
-    setInviteBooking(booking);
-    setInviteModalOpen(true);
-  };
+  const chartData = (Array.isArray(stats?.skillRatingHistory) ? stats.skillRatingHistory : [])
+    .slice(-8).map(h => ({ date: format(new Date(h.date), 'MMM d'), rating: parseFloat((h.rating || 3).toFixed(2)) }));
 
-  const copyLink = () => {
-    navigator.clipboard.writeText(`https://padelpro.pk/courts/${inviteBooking?.courtId}?ref=invite`);
-    toast.success('Link copied!');
-  };
-
-  const pastBookings = bookings.filter(b => new Date(b.date) < new Date());
-  const upcomingBookings = bookings.filter(b => new Date(b.date) >= new Date() || b.status === "CONFIRMED");
-
-  const stats = [
-    { label: 'Weekly Streak', val: pastBookings.length > 0 ? '1 Day' : '0 Days', icon: Zap, color: 'text-accent-orange' },
-    { label: 'Skill Level', val: user?.skillLevel?.charAt(0).toUpperCase() + user?.skillLevel?.slice(1) || 'Beginner', icon: Trophy, color: 'text-ai-purple' },
-    { label: 'Matches Won', val: pastBookings.length.toString(), icon: Star, color: 'text-success' },
-    { label: 'Hours Played', val: `${pastBookings.length}h`, icon: Clock, color: 'text-accent-blue' },
+  const radarData = [
+    { subject: 'Skill', value: Math.round(((stats?.skillRating || 3) / 7) * 100) },
+    { subject: 'Win Rate', value: Math.round(stats?.winRate || 50) },
+    { subject: 'Experience', value: Math.min(100, Math.round(((stats?.matchesPlayed || 0) / 50) * 100)) },
+    { subject: 'Form', value: (stats?.recentForm || []).filter(f => f === 'W').length * 10 },
+    { subject: 'Streak', value: Math.min(100, Math.max(0, ((stats?.currentStreak || 0) + 5) * 10)) },
   ];
 
-  if (!user) return null; // Wait for appStore to handle redirect if needed
+  const wlData = [
+    { name: 'Wins', value: stats?.totalWins || 0, color: '#00E676' },
+    { name: 'Losses', value: stats?.totalLosses || 0, color: '#EF4444' },
+  ].filter(d => d.value > 0);
+
+  const refreshStats = () => {
+    playerService.getMyStats().then(d => setStats(d?.data || d)).catch(() => {});
+  };
+
+  if (!user) return null;
 
   return (
     <PageWrapper>
-      <div className="max-w-7xl mx-auto px-6 pb-24">
-        {/* Welcome Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
-           <div>
-              <h1 className="text-4xl font-bold font-display mb-2">Welcome back, {displayName.split(' ')[0]} 👋</h1>
-              <p className="text-text-secondary">Ready for another game in Karachi?</p>
-           </div>
-           <div className="flex gap-4">
-              <Button onClick={() => navigate('/courts')} icon={Plus}>New Booking</Button>
-           </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-28">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10 pt-2">
+          <div>
+            <h1 className="text-5xl md:text-6xl font-display">WELCOME BACK,<br /><span className="text-accent">{displayName.split(' ')[0].toUpperCase()}</span></h1>
+            <p className="text-text-secondary mt-1 font-body">Karachi Padel — Your performance hub</p>
+          </div>
+          <div className="flex gap-3">
+            <Button onClick={() => setLogMatchOpen(true)} variant="outline" icon={Swords} size="sm">Log Match</Button>
+            <Button onClick={() => navigate('/courts')} icon={Plus} size="sm">Book Court</Button>
+          </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-           {stats.map((stat, i) => (
-             <Card key={i} className="flex flex-col items-center text-center p-6 bg-gradient-to-br from-bg-card to-bg-elevated">
-                <div className={`w-12 h-12 rounded-xl bg-bg-subtle flex items-center justify-center mb-4 ${stat.color}`}>
-                   <stat.icon size={24} />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <StatCard label="Skill Rating" value={((stats?.skillRating || user?.skillRating || 3)).toFixed ? (stats?.skillRating || user?.skillRating || 3).toFixed(1) : '3.0'} icon={Star} color="text-accent" sub={`${user?.skillLevel || 'beginner'} level`} />
+          <StatCard label="Total Wins" value={stats?.totalWins || 0} icon={Trophy} color="text-accent-orange" sub={`${(stats?.winRate || 0).toFixed(0)}% win rate`} />
+          <StatCard label="Matches" value={stats?.matchesPlayed || 0} icon={Activity} color="text-accent-blue" sub={`${stats?.totalLosses || 0} losses`} />
+          <StatCard label="Streak"
+            value={(stats?.currentStreak || 0) > 0 ? `+${stats.currentStreak}W` : (stats?.currentStreak || 0) < 0 ? `${Math.abs(stats.currentStreak)}L` : '—'}
+            icon={Zap} color={(stats?.currentStreak || 0) >= 0 ? 'text-accent' : 'text-danger'}
+            sub={(stats?.currentStreak || 0) > 0 ? 'Win streak' : (stats?.currentStreak || 0) < 0 ? 'Loss streak' : 'No active streak'} />
+        </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+          <div className="xl:col-span-2 space-y-6">
+            {/* Skill Rating Chart */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h3 className="text-xl font-display">SKILL RATING HISTORY</h3>
+                  <p className="text-xs text-text-muted mt-1 font-body">ELO-based progression — updated after every match</p>
                 </div>
-                <span className="text-xs font-bold text-text-muted uppercase tracking-widest mb-1">{stat.label}</span>
-                <span className="text-xl font-bold font-display">{stat.val}</span>
-             </Card>
-           ))}
-        </div>
+                <span className="font-mono font-bold text-accent text-lg">{(stats?.skillRating || user?.skillRating || 3).toFixed?.(2) || '3.00'}</span>
+              </div>
+              {chartData.length > 1 ? (
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                    <XAxis dataKey="date" tick={{ fill: '#4A6080', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis domain={['auto', 'auto']} tick={{ fill: '#4A6080', fontSize: 11 }} axisLine={false} tickLine={false} width={35} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Line type="monotone" dataKey="rating" stroke="#00E676" strokeWidth={2.5} dot={{ fill: '#00E676', r: 4, strokeWidth: 0 }} name="Skill Rating" />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[200px] flex items-center justify-center border-2 border-dashed border-border rounded-2xl">
+                  <div className="text-center">
+                    <BarChart2 size={32} className="text-text-muted mx-auto mb-3" />
+                    <p className="text-text-muted text-sm font-body">Log matches to build your rating history</p>
+                    <Button size="sm" variant="ghost" className="mt-3 !text-accent" onClick={() => setLogMatchOpen(true)}>Log your first match →</Button>
+                  </div>
+                </div>
+              )}
+            </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-           {/* Main Column */}
-           <div className="lg:col-span-8 space-y-12">
-              {/* Upcoming Games */}
-              <section>
-                 <div className="flex items-center justify-between mb-8">
-                    <h3 className="text-2xl font-bold font-display flex items-center gap-3">
-                      <Calendar className="text-accent-blue" /> Upcoming Games
-                    </h3>
-                    <Button variant="ghost" size="sm" onClick={() => navigate('/bookings')}>View All</Button>
-                 </div>
-                 
-                 <div className="space-y-4">
-                    {bookingsLoading ? (
-                      <p className="text-text-secondary text-sm">Loading your games...</p>
-                    ) : upcomingBookings.length > 0 ? (
-                      upcomingBookings.map((booking, i) => (
-                        <Card key={booking.id} className="p-0 overflow-hidden border-l-4 border-l-accent-blue hover:translate-x-1 transition-all duration-300">
-                           <div className="p-6 flex flex-col md:flex-row items-center gap-6">
-                              <div className="bg-bg-elevated p-4 rounded-2xl text-center min-w-[100px]">
-                                 <p className="text-[10px] font-bold text-accent-blue uppercase mb-1">
-                                    {new Date(booking.date).toLocaleString('default', { month: 'short' })}
-                                 </p>
-                                 <p className="text-3xl font-bold font-display leading-none">
-                                    {new Date(booking.date).getDate()}
-                                 </p>
-                              </div>
-                              <div className="flex-1 text-center md:text-left">
-                                 <h4 className="text-xl font-bold mb-1">{booking.court?.name || 'Court'}</h4>
-                                 <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm text-text-secondary">
-                                    <span className="flex items-center gap-1.5"><Clock size={14} /> {booking.time} (1h)</span>
-                                    <span className="flex items-center gap-1.5"><MapPin size={14} /> {booking.court?.area || 'Karachi'}</span>
-                                    {booking.isMatch && <Badge variant="blue">PUBLIC MATCH</Badge>}
-                                 </div>
-                              </div>
-                              <div className="flex gap-2">
-                                 <Button variant="outline" size="sm" onClick={() => handleInvite(booking)}>Invite Friends</Button>
-                                 <Button size="sm" onClick={() => navigate(`/courts/${booking.courtId}`)}>Details</Button>
-                              </div>
-                           </div>
-                        </Card>
-                      ))
-                    ) : (
-                      <div className="py-12 border-2 border-dashed border-border rounded-3xl text-center">
-                         <p className="text-text-muted text-sm mb-4 italic">No games scheduled yet.</p>
-                         <Button variant="outline" size="sm" onClick={() => navigate('/courts')}>Find a Court</Button>
-                      </div>
-                    )}
-                 </div>
-              </section>
-
-              {/* AI Skill Drift / Analysis */}
-              <section>
-                 <div className="flex items-center justify-between mb-8">
-                    <h3 className="text-2xl font-bold font-display flex items-center gap-3">
-                      <Zap className="text-ai-purple" /> AI Performance Hub
-                    </h3>
-                 </div>
-                 <Card className="bg-gradient-to-br from-bg-card to-bg-elevated/50 p-8 space-y-8">
-                    <div className="flex flex-col md:flex-row gap-8 items-center">
-                       <div className="relative w-32 h-32 flex items-center justify-center shrink-0">
-                          <svg className="w-full h-full -rotate-90">
-                             <circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="12" fill="transparent" className="text-border" />
-                             <circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="12" fill="transparent" strokeDasharray={364} strokeDashoffset={364 * 0.25} className="text-ai-purple transition-all duration-1000" />
-                          </svg>
-                          <div className="absolute flex flex-col items-center">
-                             <span className="text-3xl font-bold">75%</span>
-                             <span className="text-[10px] uppercase font-bold text-text-muted">Rank</span>
-                          </div>
-                       </div>
-                       <div className="space-y-4 flex-1">
-                          <h4 className="text-lg font-bold">You're hitting your peak! 🚀</h4>
-                          <p className="text-text-secondary text-sm leading-relaxed">Based on your last 5 matches, your net-game accuracy has improved by <span className="text-success font-bold">12%</span>. However, your back-glass defense needs work.</p>
-                          <div className="flex gap-3">
-                             <Badge variant="blue" className="!bg-success/10 !text-success border-success/20">+ Volley Acc.</Badge>
-                             <Badge variant="blue" className="!bg-danger/10 !text-danger border-danger/20">- Glass Ref.</Badge>
-                          </div>
-                       </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <Card className="p-6">
+                <h3 className="text-xl font-display mb-5">WIN / LOSS</h3>
+                <div className="flex items-center gap-6">
+                  <ResponsiveContainer width={110} height={110}>
+                    <PieChart>
+                      <Pie data={wlData.length ? wlData : [{ name: 'No data', value: 1, color: '#1E3050' }]} cx="50%" cy="50%" innerRadius={35} outerRadius={52} dataKey="value" paddingAngle={3}>
+                        {(wlData.length ? wlData : [{ color: '#1E3050' }]).map((d, i) => <Cell key={i} fill={d.color} />)}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="flex-1 space-y-3">
+                    <div>
+                      <div className="flex justify-between text-sm mb-1"><span className="text-text-muted font-body">Wins</span><span className="font-bold text-accent">{stats?.totalWins || 0}</span></div>
+                      <div className="h-1.5 bg-bg-elevated rounded-full overflow-hidden"><div className="h-full bg-accent rounded-full" style={{ width: `${Math.min(100, stats?.winRate || 0)}%` }} /></div>
                     </div>
-                 </Card>
-              </section>
-           </div>
-
-           {/* Side Column */}
-           <div className="lg:col-span-4 space-y-12">
-              {/* Profile Card Mini */}
-              <Card className="p-8 text-center bg-bg-elevated">
-                 <Avatar name={displayName} size="xl" className="mx-auto mb-6 border-4 border-border ring-4 ring-accent-blue/10" />
-                 <h4 className="text-xl font-bold mb-1">{displayName}</h4>
-                 <Badge variant="intermediate" className="mb-6 uppercase">{user?.skillLevel || 'BEGINNER'} • RANK #{(Math.floor(Math.random() * 500) + 100)}</Badge>
-                 <div className="h-px bg-border mb-6" />
-                 <Button variant="ghost" className="w-full text-xs font-bold uppercase tracking-widest text-text-muted hover:text-text-primary" onClick={() => navigate('/profile')}>Edit My Profile <ChevronRight size={14} /></Button>
+                    <div>
+                      <div className="flex justify-between text-sm mb-1"><span className="text-text-muted font-body">Losses</span><span className="font-bold text-danger">{stats?.totalLosses || 0}</span></div>
+                      <div className="h-1.5 bg-bg-elevated rounded-full overflow-hidden"><div className="h-full bg-danger rounded-full" style={{ width: `${Math.min(100, 100 - (stats?.winRate || 0))}%` }} /></div>
+                    </div>
+                  </div>
+                </div>
               </Card>
 
-              {/* Alerts / Activity */}
-              <section className="space-y-6">
-                 <h4 className="text-xs font-bold uppercase tracking-[0.2em] text-text-muted">Market Alerts</h4>
-                 <div className="space-y-4">
-                    {[
-                      { icon: ShoppingBag, color: 'text-accent-orange', text: 'Price drop for Head Pro balls you saved!' },
-                      { icon: Users, color: 'text-accent-blue', text: 'Zubair A. challenged you to a match.' },
-                      { icon: Trophy, color: 'text-warning', text: 'Ramadan Tournament registration opens soon.' },
-                    ].map((alert, i) => (
-                      <div key={i} className="flex gap-4 p-4 rounded-2xl bg-bg-card border border-border group cursor-pointer hover:border-border-strong transition-all">
-                         <div className={`p-2 bg-bg-subtle rounded-lg shrink-0 ${alert.color}`}><alert.icon size={18} /></div>
-                         <p className="text-sm font-medium text-text-secondary group-hover:text-text-primary leading-tight">{alert.text}</p>
-                      </div>
-                    ))}
-                 </div>
-              </section>
+              <Card className="p-6">
+                <h3 className="text-xl font-display mb-2">PERFORMANCE</h3>
+                <ResponsiveContainer width="100%" height={160}>
+                  <RadarChart data={radarData}>
+                    <PolarGrid stroke="rgba(255,255,255,0.05)" />
+                    <PolarAngleAxis dataKey="subject" tick={{ fill: '#4A6080', fontSize: 9 }} />
+                    <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
+                    <Radar dataKey="value" stroke="#00E676" fill="#00E676" fillOpacity={0.12} />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </Card>
+            </div>
 
-              {/* Quick AI Tip */}
-              <div className="bg-ai-purple/10 border border-ai-purple/30 p-8 rounded-[2rem] text-center space-y-4">
-                 <div className="w-12 h-12 bg-ai-purple text-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-ai-purple/20">
-                    <Zap size={24} fill="currentColor" />
-                 </div>
-                 <h5 className="font-bold font-display text-ai-purple">Pro Tip Of The Day</h5>
-                 <p className="text-xs text-text-secondary leading-relaxed italic">"Avoid hitting the ball into the corner glass if you can't follow it. Instead, aim for the middle to force communication errors."</p>
-                 <Badge variant="ai">By Coach Fatima</Badge>
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-display">RECENT FORM</h3>
+                <button onClick={() => navigate('/leaderboard')} className="text-xs text-accent hover:underline font-body">Leaderboard →</button>
               </div>
-           </div>
+              <div className="flex gap-2 flex-wrap mb-4">
+                {(stats?.recentForm || []).length > 0
+                  ? (stats.recentForm || []).map((r, i) => <FormBadge key={i} result={r} />)
+                  : <p className="text-text-muted text-sm font-body">No matches logged yet.</p>}
+              </div>
+              {(stats?.recentMatches || []).length > 0 && (
+                <div className="space-y-2 border-t border-border pt-4">
+                  {stats.recentMatches.slice(0, 4).map(m => (
+                    <div key={m.id} className="flex items-center gap-3 p-3 rounded-xl bg-bg-elevated border border-border">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${m.result === 'W' ? 'bg-accent/10 text-accent' : 'bg-danger/10 text-danger'}`}>{m.result}</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold truncate">vs. {m.opponent?.name || 'Unknown'}</p>
+                        <p className="text-xs text-text-muted font-body">{m.court?.name || ''}{m.date ? ` • ${format(new Date(m.date), 'MMM d, yyyy')}` : ''}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </div>
+
+          <div className="space-y-5">
+            <Card className="p-6 text-center">
+              <Avatar name={displayName} src={user?.avatarUrl} size="xl" className="mx-auto mb-4 ring-2 ring-accent/20" />
+              <h4 className="text-xl font-display">{displayName.toUpperCase()}</h4>
+              <p className="text-text-muted text-sm mb-3 font-body">{user?.preferredArea || user?.city || 'Karachi'}</p>
+              <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border mb-4 ${user?.skillLevel === 'professional' ? 'badge-professional' : user?.skillLevel === 'advanced' ? 'badge-advanced' : user?.skillLevel === 'intermediate' ? 'badge-intermediate' : 'badge-beginner'}`}>
+                {(user?.skillLevel || 'beginner').toUpperCase()}
+              </div>
+              <div className="h-px bg-border mb-4" />
+              <div className="text-center mb-4">
+                <p className="text-4xl font-display text-accent">{(stats?.skillRating || user?.skillRating || 3).toFixed?.(1) || '3.0'}</p>
+                <p className="text-xs text-text-muted font-body">Skill Rating (1.0–7.0)</p>
+              </div>
+              <Button size="sm" variant="outline" className="w-full" onClick={() => navigate('/profile')}>Edit Profile <ChevronRight size={14} /></Button>
+            </Card>
+
+            <Card className="p-4 space-y-1">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-text-muted px-2 mb-3">Quick Actions</h4>
+              {[
+                { label: 'Find Match Partner', icon: Users, path: '/matches', color: 'text-ai-purple' },
+                { label: 'Book a Court', icon: MapPin, path: '/courts', color: 'text-accent-blue' },
+                { label: 'View Leaderboard', icon: Trophy, path: '/leaderboard', color: 'text-accent' },
+                { label: 'Tournaments', icon: Star, path: '/tournaments', color: 'text-accent-orange' },
+              ].map(({ label, icon: Icon, path, color }) => (
+                <button key={path} onClick={() => navigate(path)}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-bg-elevated transition-all group text-left">
+                  <Icon size={18} className={color} />
+                  <span className="text-sm font-medium group-hover:text-text-primary text-text-secondary font-body">{label}</span>
+                  <ChevronRight size={14} className="ml-auto text-text-muted" />
+                </button>
+              ))}
+            </Card>
+
+            <Card className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-xs font-bold uppercase tracking-widest text-text-muted">Upcoming Games</h4>
+                <button onClick={() => navigate('/bookings')} className="text-xs text-accent hover:underline font-body">View all</button>
+              </div>
+              {upcomingBookings.length > 0 ? (
+                <div className="space-y-3">
+                  {upcomingBookings.slice(0, 3).map(b => (
+                    <div key={b.id} className="flex items-center gap-3 p-3 rounded-xl bg-bg-elevated border border-border">
+                      <div className="w-10 h-10 bg-accent-blue/10 border border-accent-blue/20 rounded-xl flex flex-col items-center justify-center shrink-0">
+                        <span className="text-[9px] font-bold text-accent-blue uppercase">{format(new Date(b.date), 'MMM')}</span>
+                        <span className="text-sm font-bold font-display leading-none">{new Date(b.date).getDate()}</span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold truncate">{b.court?.name || 'Court'}</p>
+                        <p className="text-xs text-text-muted font-body">{b.startTime} • Rs {b.totalAmount?.toLocaleString()}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-text-muted text-center py-4 font-body">No upcoming bookings</p>
+              )}
+            </Card>
+          </div>
         </div>
       </div>
 
-      <Modal isOpen={inviteModalOpen} onClose={() => setInviteModalOpen(false)} title="Invite to Game" className="max-w-md">
-         {inviteBooking && (
-            <div className="space-y-6 text-center">
-              <div>
-                <h4 className="font-bold text-lg font-display">{inviteBooking.court?.name || 'Padel Match'}</h4>
-                <p className="text-sm text-text-secondary">{new Date(inviteBooking.date).toLocaleDateString()} • {inviteBooking.time}</p>
-              </div>
-              <div className="bg-bg-elevated p-3 rounded-xl border border-border flex items-center justify-between gap-3">
-                 <input 
-                   readOnly 
-                   className="bg-transparent flex-1 text-sm text-text-muted outline-none truncate" 
-                   value={`https://padelpro.pk/courts/${inviteBooking.courtId}?ref=invite`}
-                 />
-                 <Button size="sm" onClick={copyLink} className="whitespace-nowrap bg-accent-blue text-white hover:bg-accent-blue/90">Copy Link</Button>
-              </div>
-              <div>
-                <p className="text-xs font-bold text-text-muted uppercase mb-4">Or share via:</p>
-                <div className="flex justify-center gap-4">
-                   <button className="w-12 h-12 rounded-full bg-[#25D366]/10 text-[#25D366] flex items-center justify-center hover:bg-[#25D366]/20 transition-all font-bold cursor-pointer" onClick={() => window.open(`https://wa.me/?text=Join me for padel at ${inviteBooking.court?.name || 'Padel Match'}`, '_blank')}>W</button>
-                   <button className="w-12 h-12 rounded-full bg-[#E1306C]/10 text-[#E1306C] flex items-center justify-center hover:bg-[#E1306C]/20 transition-all font-bold cursor-pointer" onClick={() => window.open('https://instagram.com', '_blank')}>IG</button>
-                   <button className="w-12 h-12 rounded-full bg-[#1DA1F2]/10 text-[#1DA1F2] flex items-center justify-center hover:bg-[#1DA1F2]/20 transition-all font-bold cursor-pointer" onClick={() => window.open(`https://twitter.com/intent/tweet?text=Join me for padel at ${inviteBooking.court?.name || 'Padel Match'}`, '_blank')}>TW</button>
-                </div>
-              </div>
-            </div>
-         )}
-      </Modal>
+      <LogResultModal
+        isOpen={logMatchOpen}
+        onClose={() => { setLogMatchOpen(false); refreshStats(); }}
+        connectedPlayers={[]}
+      />
     </PageWrapper>
   );
 };

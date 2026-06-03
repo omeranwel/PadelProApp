@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, Search, SlidersHorizontal, Users, ShieldCheck, MapIcon, ChevronRight, UserCheck, Send } from 'lucide-react';
+import { Zap, Search, SlidersHorizontal, Users, ShieldCheck, MapIcon, ChevronRight, UserCheck, Send, ClipboardList } from 'lucide-react';
 import PageWrapper from '../components/layout/PageWrapper';
 import PlayerCard from '../components/features/PlayerCard';
 import Button from '../components/ui/Button';
@@ -10,6 +10,7 @@ import Input from '../components/ui/Input';
 import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
 import Avatar from '../components/ui/Avatar';
+import LogResultModal from '../components/features/LogResultModal';
 import { useMatchStore } from '../store/matchStore';
 import { useAuthStore } from '../store/authStore';
 import { playerService } from '../services/playerService';
@@ -57,6 +58,7 @@ const Matches = () => {
     }
   };
   
+  const [showLogResult, setShowLogResult] = useState(false);
   const [chatPlayer, setChatPlayer] = useState(null);
   const [message, setMessage] = useState('');
   const [chatMessages, setChatMessages] = useState([]);
@@ -228,10 +230,17 @@ const Matches = () => {
             <div className="flex-1 space-y-6">
                <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
                   <h3 className="text-xl font-bold font-display uppercase tracking-tight hidden sm:block">Players</h3>
+                  <div className="flex items-center gap-3 flex-wrap">
+                  {isLoggedIn && (
+                    <Button size="sm" variant="outline" icon={ClipboardList} onClick={() => setShowLogResult(true)}>
+                      Log Result
+                    </Button>
+                  )}
                   <div className="flex bg-bg-elevated p-1 rounded-lg border border-border">
                      <button onClick={() => setActiveTab('active')} className={`px-4 py-2 text-xs font-bold rounded-md transition-colors ${activeTab === 'active' ? 'bg-bg-card text-accent-blue shadow-sm' : 'text-text-muted hover:text-text-primary'}`}>Active ({filteredPlayers.length})</button>
                      <button onClick={() => setActiveTab('requests')} className={`px-4 py-2 text-xs font-bold rounded-md transition-colors ${activeTab === 'requests' ? 'bg-bg-card text-accent-blue shadow-sm' : 'text-text-muted hover:text-text-primary'}`}>Requests {receivedRequests.length > 0 && <span className="ml-1 bg-accent-orange text-white px-1.5 rounded-full">{receivedRequests.length}</span>}</button>
                      <button onClick={() => setActiveTab('connected')} className={`px-4 py-2 text-xs font-bold rounded-md transition-colors ${activeTab === 'connected' ? 'bg-bg-card text-accent-blue shadow-sm' : 'text-text-muted hover:text-text-primary'}`}>Connected ({connectedPlayers.length})</button>
+                  </div>
                   </div>
                </div>
 
@@ -277,6 +286,12 @@ const Matches = () => {
           </div>
         </section>
       )}
+
+      <LogResultModal
+        isOpen={showLogResult}
+        onClose={() => setShowLogResult(false)}
+        connectedPlayers={[...receivedRequests, ...requests]}
+      />
 
       {/* Chat Modal */}
       <Modal isOpen={!!chatPlayer} onClose={() => {setChatPlayer(null); setChatMessages([])}} title="Message Player" className="max-w-md">

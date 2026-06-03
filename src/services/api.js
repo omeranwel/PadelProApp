@@ -1,10 +1,11 @@
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 const getHeaders = () => {
-  const token = localStorage.getItem('auth-storage') 
-    ? JSON.parse(localStorage.getItem('auth-storage')).state.token 
-    : null;
-    
+  let token = null;
+  try {
+    const raw = localStorage.getItem('padelpro-auth');
+    if (raw) token = JSON.parse(raw)?.state?.token ?? null;
+  } catch {}
   return {
     'Content-Type': 'application/json',
     ...(token && { 'Authorization': `Bearer ${token}` })

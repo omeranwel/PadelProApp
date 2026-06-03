@@ -1,5 +1,6 @@
 import prisma from '../../config/db.js';
 import { io } from '../../config/socket.js';
+import { sendMatchInvite, sendMatchAccepted } from '../../utils/email.js';
 
 export const sendRequest = async (senderId, receiverId, message) => {
   const request = await prisma.matchRequest.create({
@@ -23,6 +24,15 @@ export const sendRequest = async (senderId, receiverId, message) => {
       link: '/matches?tab=requests'
     }
   });
+
+  // Email the receiver
+  try {
+    const receiver = await prisma.user.findUnique({ where: { id: receiverId }, select: { email: true, name: true } });
+    const senderFull = await prisma.user.findUnique({ where: { id: senderId }, select: { name: true, skillLevel: true, city: true } });
+    if (receiver?.email) {
+      sendMatchInvite(receiver, senderFull, { message }).catch(() => {});
+    }
+  } catch {}
 
   // Real-time emit
   if (io) {
@@ -111,6 +121,14 @@ export const updateRequest = async (id, userId, status) => {
         message: notification.message
       });
     }
+
+    // Email the original requestor
+    try {
+      const acceptor = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+      if (request.sender?.email && acceptor) {
+        sendMatchAccepted(request.sender, acceptor).catch(() => {});
+      }
+    } catch {}
 
     return { ...updated, conversationId: conversation.id };
   }

@@ -225,6 +225,19 @@ export const cancelBooking = async (id, userId) => {
     }
   } catch (ioErr) { }
 
+  // Send cancellation email
+  try {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } });
+    if (user?.email) {
+      const { sendBookingCancellation } = await import('../../utils/email.js');
+      sendBookingCancellation(user, {
+        courtName: booking.court.name,
+        date: booking.date,
+        startTime: booking.startTime
+      }).catch(() => {});
+    }
+  } catch {}
+
   return updated;
 };
 

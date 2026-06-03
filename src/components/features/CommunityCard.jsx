@@ -20,7 +20,7 @@ const CommunityCard = ({ post }) => {
            <div className="flex items-center gap-3">
               <div className="relative">
                 <Avatar name={post.author.name} size="md" />
-                {post.author.skill === 'professional' && (
+                {post.author.skillLevel === 'professional' && (
                   <div className="absolute -bottom-1 -right-1 bg-warning text-white p-0.5 rounded-full ring-2 ring-bg-card">
                     <Award size={10} />
                   </div>
@@ -29,7 +29,7 @@ const CommunityCard = ({ post }) => {
               <div>
                  <h4 className="font-bold text-sm">{post.author.name}</h4>
                  <div className="flex items-center gap-2">
-                    <Badge variant={post.author.skill === 'professional' ? 'professional' : 'default'} className="!text-[9px] py-0">{post.author.skill}</Badge>
+                    <Badge variant={post.author.skillLevel === 'professional' ? 'professional' : 'default'} className="!text-[9px] py-0">{post.author.skillLevel}</Badge>
                     <span className="text-[10px] text-text-muted font-bold">• {post.createdAt.toUpperCase()}</span>
                  </div>
               </div>
