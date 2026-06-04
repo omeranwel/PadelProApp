@@ -148,7 +148,14 @@ const Navbar = () => {
               <div className="relative group">
                 <button className="flex items-center gap-2"><Avatar name={user?.name} src={user?.avatarUrl} size="sm" /></button>
                 <div className="absolute right-0 mt-2 w-52 bg-bg-elevated border border-border rounded-2xl p-2 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all translate-y-2 group-hover:translate-y-0 shadow-2xl">
-                  {[{label:'Dashboard',path:'/dashboard'},{label:'My Bookings',path:'/bookings'},{label:'Profile',path:'/profile'},{label:'Messages',path:'/chat'}].map(({label,path}) => (
+                  {[
+                    ...(user?.role === 'APP_ADMIN' ? [{label:'Admin Dashboard',path:'/admin'}] : []),
+                    ...(user?.role === 'CLUB_ADMIN' ? [{label:'Club Dashboard',path:'/club'}] : []),
+                    {label:'Dashboard',path:'/dashboard'},
+                    {label:'My Bookings',path:'/bookings'},
+                    {label:'Profile',path:'/profile'},
+                    {label:'Messages',path:'/chat'}
+                  ].map(({label,path}) => (
                     <Link key={path} to={path} className="block px-3 py-2.5 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-bg-subtle rounded-xl transition-all">{label}</Link>
                   ))}
                   <div className="h-px bg-border my-1" />
