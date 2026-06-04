@@ -1,7 +1,7 @@
 import prisma from '../../config/db.js';
 import { formatDistanceToNow } from 'date-fns';
 
-export const getPosts = async (tab = 'feed') => {
+export const getPosts = async (tab = 'feed', userId = null) => {
   const where = {
     isActive: true
   };
@@ -13,7 +13,8 @@ export const getPosts = async (tab = 'feed') => {
     where,
     include: {
       author: { select: { id: true, name: true, avatarUrl: true, skillLevel: true } },
-      _count: { select: { replies: true } }
+      _count: { select: { replies: true } },
+      postLikes: userId ? { where: { userId } } : false
     },
     orderBy: { createdAt: 'desc' }
   });
@@ -27,6 +28,7 @@ export const getPosts = async (tab = 'feed') => {
     coverUrl: p.coverUrl,
     author: p.author,
     likes: p.likes,
+    isLiked: userId ? p.postLikes.length > 0 : false,
     comments: p._count.replies,
     createdAt: formatDistanceToNow(new Date(p.createdAt), { addSuffix: true }),
     tags: p.category ? [p.category] : []
@@ -51,12 +53,42 @@ export const createPost = async (authorId, data, coverFile) => {
   });
 };
 
-export const toggleLike = async (postId, increment = true) => {
-  return await prisma.post.update({
-    where: { id: postId },
-    data: {
-      likes: { [increment ? 'increment' : 'decrement']: 1 }
+export const toggleLike = async (postId, userId, action) => {
+  const isLike = action === 'like';
+
+  return await prisma.$transaction(async (tx) => {
+    const existing = await tx.postLike.findUnique({
+      where: {
+        postId_userId: { postId, userId }
+      }
+    });
+
+    if (isLike && !existing) {
+      await tx.postLike.create({
+        data: { postId, userId }
+      });
+      await tx.post.update({
+        where: { id: postId },
+        data: { likes: { increment: 1 } }
+      });
+    } else if (!isLike && existing) {
+      await tx.postLike.delete({
+        where: {
+          postId_userId: { postId, userId }
+        }
+      });
+      await tx.post.update({
+        where: { id: postId },
+        data: { likes: { decrement: 1 } }
+      });
     }
+
+    const post = await tx.post.findUnique({
+      where: { id: postId },
+      select: { likes: true }
+    });
+
+    return { success: true, likes: post.likes };
   });
 };
 

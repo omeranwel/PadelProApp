@@ -45,7 +45,7 @@ export const login = async (email, password) => {
   if (!user.isVerified) {
     // Resend OTP
     try { const otp = await generateOtp(email); await sendOtpEmail(email, otp, user.name); } catch {}
-    const err = new Error('Email not verified. A new code has been sent to your email.'); err.status = 403; err.requiresVerification = true; throw err;
+    const err = new Error('Email not verified. A new code has been sent to your email.'); err.status = 403; err.requiresVerification = true; err.email = email; throw err;
   }
 
   const safeUser = await prisma.user.findUnique({ where: { id: user.id }, select: safeUserSelect });

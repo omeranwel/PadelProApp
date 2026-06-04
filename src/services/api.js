@@ -17,7 +17,9 @@ export const api = {
     const res = await fetch(`${API_URL}${endpoint}`, { headers: getHeaders() });
     if (!res.ok) {
       const error = await res.json();
-      throw new Error(error.error || 'Request failed');
+      const err = new Error(error.error || 'Request failed');
+      err.response = { data: error };
+      throw err;
     }
     return res.json();
   },
@@ -33,7 +35,9 @@ export const api = {
     });
     if (!res.ok) {
       const error = await res.json();
-      throw new Error(error.error || 'Request failed');
+      const err = new Error(error.error || 'Request failed');
+      err.response = { data: error };
+      throw err;
     }
     return res.json();
   },
@@ -46,7 +50,9 @@ export const api = {
     });
     if (!res.ok) {
       const error = await res.json();
-      throw new Error(error.error || 'Request failed');
+      const err = new Error(error.error || 'Request failed');
+      err.response = { data: error };
+      throw err;
     }
     return res.json();
   },
@@ -59,7 +65,9 @@ export const api = {
     });
     if (!res.ok) {
       const error = await res.json();
-      throw new Error(error.error || 'Request failed');
+      const err = new Error(error.error || 'Request failed');
+      err.response = { data: error };
+      throw err;
     }
     return res.json();
   },
@@ -71,7 +79,9 @@ export const api = {
     });
     if (!res.ok) {
       const error = await res.json();
-      throw new Error(error.error || 'Request failed');
+      const err = new Error(error.error || 'Request failed');
+      err.response = { data: error };
+      throw err;
     }
     return res.json();
   }

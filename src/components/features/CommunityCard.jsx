@@ -16,7 +16,7 @@ const CommunityCard = ({ post }) => {
   const { user } = useAuthStore();
   const { openAuthModal } = useAppStore();
   const [likes, setLikes] = useState(post.likes || 0);
-  const [isLiked, setIsLiked] = useState(false);
+  const [isLiked, setIsLiked] = useState(post.isLiked || false);
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState([]);
   const [commentsCount, setCommentsCount] = useState(post.comments || 0);
@@ -35,7 +35,7 @@ const CommunityCard = ({ post }) => {
       setIsLiked(!isLiked);
       setLikes(prev => isLiked ? prev - 1 : prev + 1);
     } catch (err) {
-      toast.error('Failed to like post');
+      toast.error(err.message || 'Failed to like post');
     }
   };
 
@@ -48,7 +48,7 @@ const CommunityCard = ({ post }) => {
         const res = await communityService.getReplies(post.id);
         setComments(res.data || res);
       } catch (err) {
-        toast.error('Failed to load comments');
+        toast.error(err.message || 'Failed to load comments');
       } finally {
         setLoadingComments(false);
       }
@@ -80,7 +80,7 @@ const CommunityCard = ({ post }) => {
       setNewComment('');
       toast.success('Comment posted!');
     } catch (err) {
-      toast.error('Failed to post comment');
+      toast.error(err.message || 'Failed to post comment');
     }
   };
 

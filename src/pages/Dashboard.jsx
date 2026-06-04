@@ -13,6 +13,7 @@ import PlayerReviewModal from '../components/features/PlayerReviewModal';
 import { useAuthStore } from '../store/authStore';
 import { useBookingStore } from '../store/bookingStore';
 import { playerService } from '../services/playerService';
+import { api } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
@@ -51,6 +52,7 @@ const Dashboard = () => {
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewOpponent, setReviewOpponent] = useState(null);
   const [reviewMatchId, setReviewMatchId] = useState(null);
+  const [pendingReviews, setPendingReviews] = useState([]);
 
   useEffect(() => {
     if (user) {
@@ -59,6 +61,10 @@ const Dashboard = () => {
         .then(d => setStats(d?.data || d))
         .catch(() => {})
         .finally(() => setLoadingStats(false));
+
+      api.get('/reviews/pending')
+        .then(res => setPendingReviews(res.data || res))
+        .catch(() => {});
     }
   }, [user]);
 
@@ -83,6 +89,7 @@ const Dashboard = () => {
 
   const refreshStats = () => {
     playerService.getMyStats().then(d => setStats(d?.data || d)).catch(() => {});
+    api.get('/reviews/pending').then(res => setPendingReviews(res.data || res)).catch(() => {});
   };
 
   if (!user) return null;
@@ -100,6 +107,29 @@ const Dashboard = () => {
             <Button onClick={() => navigate('/courts')} icon={Plus} size="sm">Book Court</Button>
           </div>
         </div>
+
+        {pendingReviews.length > 0 && (
+          <Card className="bg-gradient-to-r from-accent/10 to-accent-blue/10 border-accent/20 p-5 mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h3 className="font-display text-lg text-text-primary flex items-center gap-2">
+                <Star className="text-warning fill-warning" size={18} /> PENDING PLAYER REVIEWS
+              </h3>
+              <p className="text-xs text-text-secondary mt-1 font-body">
+                You played recently. Rate your opponent {pendingReviews[0].opponent.name} to help build their profile!
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={() => {
+                const first = pendingReviews[0];
+                setReviewOpponent(first.opponent);
+                setReviewMatchId(first.match.id);
+                setReviewOpen(true);
+              }}>
+                Review Now
+              </Button>
+            </div>
+          </Card>
+        )}
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <StatCard label="Skill Rating" value={((stats?.skillRating || user?.skillRating || 3)).toFixed ? (stats?.skillRating || user?.skillRating || 3).toFixed(1) : '3.0'} icon={Star} color="text-accent" sub={`${user?.skillLevel || 'beginner'} level`} />
@@ -283,7 +313,10 @@ const Dashboard = () => {
 
       <PlayerReviewModal
         isOpen={reviewOpen}
-        onClose={() => setReviewOpen(false)}
+        onClose={() => {
+          setReviewOpen(false);
+          refreshStats();
+        }}
         opponent={reviewOpponent}
         matchId={reviewMatchId}
       />

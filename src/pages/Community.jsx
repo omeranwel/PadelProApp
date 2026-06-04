@@ -61,8 +61,8 @@ const Community = () => {
       setLoadingReplies(true);
       communityService.getReplies(activeForumTopic.id).then(res => {
         setReplies(res.data || res);
-      }).catch(() => {
-        toast.error('Failed to load replies');
+      }).catch((err) => {
+        toast.error(err.message || 'Failed to load replies');
       }).finally(() => setLoadingReplies(false));
     }
   }, [activeForumTopic]);
@@ -110,7 +110,7 @@ const Community = () => {
       setNewPostTitle('');
       setNewPostContent('');
     } catch (err) {
-      toast.error('Failed to share post');
+      toast.error(err.message || 'Failed to share post');
     } finally {
       setSubmittingPost(false);
     }
@@ -139,7 +139,7 @@ const Community = () => {
       setReplyText('');
       toast.success('Reply posted!');
     } catch (err) {
-      toast.error('Failed to post reply');
+      toast.error(err.message || 'Failed to post reply');
     }
   };
 
