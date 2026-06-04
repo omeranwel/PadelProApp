@@ -150,7 +150,7 @@ const Navbar = () => {
                 <div className="absolute right-0 mt-2 w-52 bg-bg-elevated border border-border rounded-2xl p-2 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all translate-y-2 group-hover:translate-y-0 shadow-2xl">
                   {[
                     ...(user?.role === 'APP_ADMIN' ? [{label:'Admin Dashboard',path:'/admin'}] : []),
-                    ...(user?.role === 'CLUB_ADMIN' ? [{label:'Club Dashboard',path:'/club'}] : []),
+                    ...((user?.role === 'CLUB_ADMIN' || user?.role === 'CLUB_OWNER') ? [{label:'Club Dashboard',path:'/club'}] : []),
                     {label:'Dashboard',path:'/dashboard'},
                     {label:'My Bookings',path:'/bookings'},
                     {label:'Profile',path:'/profile'},
@@ -165,8 +165,8 @@ const Navbar = () => {
             </>
           ) : (
             <div className="flex items-center gap-2">
-              <button onClick={() => openAuthModal('signin')} className="text-sm font-bold text-text-secondary hover:text-text-primary transition-colors px-3 py-2 hidden sm:block">Sign In</button>
-              <Button size="sm" onClick={() => openAuthModal('register')}>Join Free</Button>
+              <button onClick={() => navigate('/login')} className="text-sm font-bold text-text-secondary hover:text-text-primary transition-colors px-3 py-2 hidden sm:block">Sign In</button>
+              <Button size="sm" onClick={() => navigate('/login')}>Join Free</Button>
             </div>
           )}
 
@@ -192,8 +192,8 @@ const Navbar = () => {
               {isLoggedIn
                 ? <Button variant="outline" onClick={() => { logout(); setIsMobileMenuOpen(false); }}>Sign Out</Button>
                 : <div className="flex flex-col gap-3">
-                    <Button onClick={() => { openAuthModal('signin'); setIsMobileMenuOpen(false); }}>Sign In</Button>
-                    <Button variant="outline" onClick={() => { openAuthModal('register'); setIsMobileMenuOpen(false); }}>Join Free</Button>
+                    <Button onClick={() => { navigate('/login'); setIsMobileMenuOpen(false); }}>Sign In</Button>
+                    <Button variant="outline" onClick={() => { navigate('/login'); setIsMobileMenuOpen(false); }}>Join Free</Button>
                   </div>
               }
             </div>

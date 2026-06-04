@@ -67,7 +67,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/courts", courtRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/players", playerRoutes);
-app.use("/api/match-requests", matchRoutes);
+app.use("/api/matchmaking", matchRoutes);
 app.use("/api/listings", marketRoutes);
 app.use("/api/posts", communityRoutes);
 app.use("/api/conversations", chatRoutes);

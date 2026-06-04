@@ -20,6 +20,7 @@
     "cors": "latest",
     "express": "latest",
     "express-rate-limit": "^8.4.1",
+    "firebase-admin": "^13.10.0",
     "helmet": "latest",
     "jsonwebtoken": "latest",
     "morgan": "latest",

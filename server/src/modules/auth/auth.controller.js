@@ -1,37 +1,69 @@
-import * as authService from './auth.service.js';
+import prisma from '../../config/db.js';
+import { getDbUser } from '../../utils/getDbUser.js';
+import { createAndSendOtp, verifyOtp as verifyOtpService } from '../../services/otpService.js';
 
-export const register = async (req, res, next) => {
-  try { res.status(201).json(await authService.register(req.body)); } catch(err) { next(err); }
-};
+export const syncUser = async (req, res, next) => {
+  try {
+    const { uid, email, name, picture } = req.user; // From Firebase token
 
-export const login = async (req, res, next) => {
-  try { res.json(await authService.login(req.body.email, req.body.password)); }
-  catch (err) {
-    if (err.requiresVerification) return res.status(403).json({ error: err.message, requiresVerification: true, email: req.body.email });
-    next(err);
+    // Upsert — create if new, return existing if returning user
+    const user = await prisma.user.upsert({
+      where: { firebaseUid: uid },
+      update: { 
+        lastActive: new Date(),
+        // Update name/avatar if changed in Google account
+        ...(name && { name }),
+        ...(picture && { avatarUrl: picture }),
+      },
+      create: {
+        firebaseUid: uid,
+        email,
+        name: name || email.split('@')[0],
+        avatarUrl: picture || null,
+        role: 'PLAYER',
+        skillLevel: 'beginner',
+        skillRating: 3.0,
+        profileComplete: false,
+        isVerified: false,
+        city: 'Karachi', // default
+      },
+    });
+
+    res.json({ 
+      user,
+      isNewUser: !user.profileComplete,
+      redirect: user.profileComplete ? '/dashboard' : '/onboarding',
+    });
+  } catch (err) {
+    console.error('Auth sync error:', err);
+    res.status(500).json({ message: 'Failed to sync user', error: err.message });
   }
 };
 
-export const logout = async (req, res, next) => {
-  try { await authService.logout(req.user.id, req.body.refreshToken); res.json({ message: 'Logged out' }); } catch(err) { next(err); }
-};
-
-export const refreshToken = async (req, res, next) => {
+export const sendOtp = async (req, res, next) => {
   try {
-    const { refreshToken: token } = req.body;
-    if (!token) return res.status(400).json({ error: 'Refresh token required' });
-    res.json(await authService.refreshAccessToken(token));
-  } catch(err) { next(err); }
+    const dbUser = await getDbUser(req.user.uid);
+    if (dbUser.isVerified) {
+      return res.json({ success: true, message: 'Email already verified' });
+    }
+    await createAndSendOtp(dbUser.id, dbUser.email, dbUser.name);
+    res.json({ success: true, expiresIn: 600 });
+  } catch (err) {
+    res.status(err.message.includes('wait') ? 429 : 500)
+       .json({ message: err.message });
+  }
 };
 
 export const verifyOtp = async (req, res, next) => {
-  try { res.json(await authService.verifyOtp(req.body.email, req.body.otp)); } catch(err) { next(err); }
-};
-
-export const resendOtp = async (req, res, next) => {
-  try { res.json(await authService.resendOtp(req.body.email)); } catch(err) { next(err); }
-};
-
-export const forgotPassword = async (req, res, next) => {
-  try { await authService.sendPasswordReset(req.body.email); res.json({ message: 'Reset code sent if account exists' }); } catch(err) { next(err); }
+  try {
+    const { otp } = req.body;
+    if (!otp || otp.length !== 6) {
+      return res.status(400).json({ message: 'Invalid OTP format' });
+    }
+    const dbUser = await getDbUser(req.user.uid);
+    await verifyOtpService(dbUser.id, otp);
+    res.json({ success: true, message: 'Email verified successfully' });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
 };

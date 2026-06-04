@@ -3,7 +3,8 @@ import { api } from './api';
 export const playerService = {
   getPlayers: async (filters = {}) => {
     const params = new URLSearchParams(filters).toString();
-    return await api.get(`/players?${params}`);
+    const res = await api.get(`/matchmaking/players?${params}`);
+    return res.players || res;
   },
   getPlayerById: async (id) => api.get(`/players/${id}`),
   updateProfile: async (profileData) => api.put('/players/me', profileData),
@@ -18,8 +19,8 @@ export const playerService = {
   },
   logMatch: async (data) => api.post('/players/me/log-match', data),
   getMyStats: async () => api.get('/players/me/stats'),
-  getRequests: async (type = 'received') => api.get(`/match-requests?type=${type}`),
-  sendRequest: async (receiverId, message) => api.post('/match-requests', { receiverId, message }),
-  updateRequest: async (id, status) => api.patch(`/match-requests/${id}`, { status }),
-  cancelRequest: async (id) => api.delete(`/match-requests/${id}`),
+  getRequests: async (type = 'received') => api.get(`/matchmaking?type=${type}`),
+  sendRequest: async (receiverId, message) => api.post('/matchmaking', { receiverId, message }),
+  updateRequest: async (id, status) => api.patch(`/matchmaking/${id}`, { status }),
+  cancelRequest: async (id) => api.delete(`/matchmaking/${id}`),
 };

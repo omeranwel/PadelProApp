@@ -56,6 +56,7 @@
     "embla-carousel-react": "^8.6.0",
     "express": "latest",
     "express-rate-limit": "latest",
+    "firebase": "^12.14.0",
     "framer-motion": "^12.38.0",
     "helmet": "latest",
     "input-otp": "^1.4.2",

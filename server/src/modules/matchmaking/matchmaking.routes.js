@@ -4,6 +4,7 @@ import { verifyToken } from '../../middleware/auth.js';
 
 const router = Router();
 
+router.get('/players', verifyToken, ctrl.getPlayers);
 router.post('/', verifyToken, ctrl.sendRequest);
 router.get('/', verifyToken, ctrl.getRequests);
 router.patch('/:id', verifyToken, ctrl.updateRequest);

@@ -28,18 +28,22 @@ const Chat = lazy(() => import('./pages/Chat'));
 const Leaderboard = lazy(() => import('./pages/Leaderboard'));
 const Tournaments = lazy(() => import('./pages/Tournaments'));
 const ClubDashboard = lazy(() => import('./pages/ClubDashboard'));
+const Login = lazy(() => import('./pages/Login'));
+const ClubRegister = lazy(() => import('./pages/ClubRegister'));
+const Onboarding = lazy(() => import('./pages/Onboarding'));
+const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
 
 const ProtectedRoute = ({ children }) => {
   const { isLoggedIn } = useAuthStore();
-  const { openAuthModal, setIntendedPath } = useAppStore();
+  const { setIntendedPath } = useAppStore();
   const location = useLocation();
   React.useEffect(() => {
     if (!isLoggedIn) {
       setIntendedPath(location.pathname);
-      openAuthModal('signin');
     }
-  }, [isLoggedIn]);
-  if (!isLoggedIn) return <Navigate to="/" replace />;
+  }, [isLoggedIn, location.pathname, setIntendedPath]);
+  
+  if (!isLoggedIn) return <Navigate to="/login" replace />;
   return children;
 };
 
@@ -57,6 +61,10 @@ const App = () => (
           <Route path="/community" element={<Community />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/tournaments" element={<Tournaments />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register/club" element={<ProtectedRoute><ClubRegister /></ProtectedRoute>} />
+          <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+          <Route path="/verify-email" element={<ProtectedRoute><VerifyEmail /></ProtectedRoute>} />
           <Route path="/matches" element={<ProtectedRoute><ErrorBoundary><Matches /></ErrorBoundary></ProtectedRoute>} />
           <Route path="/market/sell" element={<ProtectedRoute><SellItem /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

@@ -48,7 +48,7 @@ const ClubDashboard = () => {
   });
 
   useEffect(() => {
-    if (!user || user.role !== 'CLUB_ADMIN') { navigate('/'); return; }
+    if (!user || (user.role !== 'CLUB_ADMIN' && user.role !== 'CLUB_OWNER')) { navigate('/'); return; }
     loadAll();
   }, []);
 
@@ -151,7 +151,7 @@ const ClubDashboard = () => {
 
   const amenityOptions = ['Parking', 'Changing Rooms', 'Pro Shop', 'Cafe/Canteen', 'Locker Rooms', 'Showers', 'WiFi', 'AC', 'Coaching Available', 'Equipment Rental'];
 
-  if (user?.role !== 'CLUB_ADMIN') return null;
+  if (user?.role !== 'CLUB_ADMIN' && user?.role !== 'CLUB_OWNER') return null;
 
   return (
     <PageWrapper>

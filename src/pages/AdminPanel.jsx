@@ -58,9 +58,8 @@ const AdminPanel = () => {
 
   const loadDashboard = async () => {
     try {
-      const data = await api.get('/admin/dashboard');
+      const data = await api.get('/admin/overview');
       setStats(data.stats);
-      if (data.recentUsers) setUsers(data.recentUsers);
     } catch { toast.error('Failed to load dashboard'); }
     finally { setLoading(false); }
   };
@@ -156,15 +155,14 @@ const AdminPanel = () => {
             ) : stats ? (
               <>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                  <StatCard icon={Users} label="Total Players" value={stats.users?.toLocaleString()} color="text-accent" />
-                  <StatCard icon={MapPin} label="Active Courts" value={stats.courts} color="text-accent-blue" />
-                  <StatCard icon={Calendar} label="Total Bookings" value={stats.bookings?.toLocaleString()} color="text-accent-orange" />
-                  <StatCard icon={DollarSign} label="Revenue (PKR)" value={`Rs ${(stats.revenue/1000).toFixed(0)}K`} color="text-success" />
+                  <StatCard icon={Users} label="Total Players" value={stats.totalUsers?.toLocaleString()} color="text-accent" />
+                  <StatCard icon={MapPin} label="Active Courts" value={stats.totalCourts} color="text-accent-blue" />
+                  <StatCard icon={Calendar} label="Total Bookings" value={stats.totalBookings?.toLocaleString()} color="text-accent-orange" />
+                  <StatCard icon={Activity} label="Total Matches" value={stats.totalMatches?.toLocaleString()} color="text-success" />
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                  <StatCard icon={Building2} label="Registered Clubs" value={stats.clubs} color="text-ai-purple" />
-                  <StatCard icon={Award} label="Tournaments" value={stats.tournaments} color="text-warning" />
-                  <StatCard icon={Activity} label="Marketplace Listings" value={stats.listings} color="text-text-secondary" />
+                  <StatCard icon={Building2} label="Pending Clubs" value={stats.pendingClubs} color="text-warning" />
+                  <StatCard icon={Activity} label="Community Posts" value={stats.totalPosts} color="text-text-secondary" />
                 </div>
 
                 <div>

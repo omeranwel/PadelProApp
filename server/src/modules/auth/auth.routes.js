@@ -1,17 +1,11 @@
 import { Router } from 'express';
-import { register, login, logout, refreshToken, verifyOtp, resendOtp, forgotPassword } from './auth.controller.js';
+import { syncUser, sendOtp, verifyOtp } from './auth.controller.js';
 import { verifyToken } from '../../middleware/auth.js';
-import { validate } from '../../middleware/validate.js';
-import { registerSchema, loginSchema, otpSchema } from './auth.schema.js';
 
 const router = Router();
 
-router.post('/register', validate(registerSchema), register);
-router.post('/login', validate(loginSchema), login);
-router.post('/logout', verifyToken, logout);
-router.post('/refresh-token', refreshToken);
-router.post('/verify-otp', validate(otpSchema), verifyOtp);
-router.post('/resend-otp', resendOtp);
-router.post('/forgot-password', forgotPassword);
+router.post('/sync', verifyToken, syncUser);
+router.post('/send-otp', verifyToken, sendOtp);
+router.post('/verify-otp', verifyToken, verifyOtp);
 
 export default router;

@@ -1,29 +1,112 @@
-import * as svc from './clubs.service.js';
+import prisma from '../../config/db.js';
+import { getDbUser } from '../../utils/getDbUser.js';
 
-export const getMyClub = async (req, res, next) => {
-  try { res.json(await svc.getMyClub(req.user.id)); } catch(e) { next(e); }
+export const applyForClub = async (req, res, next) => {
+  try {
+    const dbUser = await getDbUser(req.user.uid);
+    
+    // Check if already applied
+    const existing = await prisma.clubApplication.findFirst({
+      where: { ownerId: dbUser.id, status: { not: 'REJECTED' } }
+    });
+    
+    if (existing) {
+      return res.status(409).json({ 
+        message: 'You already have a pending or approved application',
+        status: existing.status,
+      });
+    }
+
+    const {
+      clubName, businessType, city, address, numberOfCourts,
+      surfaces, facilities, operatingHours, weekdayPrice, weekendPrice,
+      minDuration, maxAdvanceDays, cancellationPolicy,
+      photos, businessDocument, ownerCnic, ownerPhone,
+    } = req.body;
+
+    if (!clubName || !city || !address || !ownerPhone || !ownerCnic) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    const application = await prisma.clubApplication.create({
+      data: {
+        ownerId: dbUser.id,
+        clubName, businessType, city, address,
+        numberOfCourts: parseInt(numberOfCourts),
+        surfaces: surfaces || [],
+        facilities: facilities || [],
+        operatingHours: operatingHours || {},
+        weekdayPrice: parseInt(weekdayPrice),
+        weekendPrice: parseInt(weekendPrice),
+        minDuration: parseInt(minDuration),
+        maxAdvanceDays: parseInt(maxAdvanceDays),
+        cancellationPolicy,
+        photos: photos || [],
+        businessDocument: businessDocument || null,
+        ownerCnic,
+        ownerPhone,
+      },
+    });
+
+    res.status(201).json({ success: true, applicationId: application.id });
+  } catch (err) {
+    console.error('Club application error:', err);
+    res.status(500).json({ message: 'Failed to submit application', error: err.message });
+  }
 };
-export const upsertClub = async (req, res, next) => {
-  try { res.json(await svc.createOrUpdateClub(req.user.id, req.body)); } catch(e) { next(e); }
+
+export const getMyApplication = async (req, res, next) => {
+  try {
+    const dbUser = await getDbUser(req.user.uid);
+    const application = await prisma.clubApplication.findFirst({
+      where: { ownerId: dbUser.id },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json({ application });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 };
-export const getStats = async (req, res, next) => {
-  try { res.json(await svc.getClubStats(req.user.id)); } catch(e) { next(e); }
-};
-export const getBookings = async (req, res, next) => {
-  try { res.json(await svc.getClubBookings(req.user.id, req.query)); } catch(e) { next(e); }
-};
-export const patchBooking = async (req, res, next) => {
-  try { res.json(await svc.updateBookingStatus(req.params.id, req.user.id, req.body.status)); } catch(e) { next(e); }
-};
-export const getSlots = async (req, res, next) => {
-  try { res.json(await svc.getCourtSlots(req.params.courtId, req.query.date)); } catch(e) { next(e); }
-};
-export const createSlots = async (req, res, next) => {
-  try { res.json(await svc.bulkCreateSlots(req.params.courtId, req.user.id, req.body.slots)); } catch(e) { next(e); }
-};
-export const getTournaments = async (req, res, next) => {
-  try { res.json(await svc.getClubTournaments(req.user.id)); } catch(e) { next(e); }
-};
-export const getAllClubs = async (req, res, next) => {
-  try { res.json(await svc.getAllClubs()); } catch(e) { next(e); }
+
+export const getClubOverview = async (req, res, next) => {
+  try {
+    const dbUser = await getDbUser(req.user.uid);
+    const club = await prisma.club.findUnique({ 
+      where: { ownerId: dbUser.id },
+      include: { courts: true },
+    });
+    
+    if (!club) return res.status(404).json({ message: 'Club not found' });
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const courtIds = club.courts.map(c => c.id);
+
+    const [bookingsToday, bookingsTotal, uniquePlayers] = await Promise.all([
+      prisma.booking.count({ 
+        where: { courtId: { in: courtIds }, createdAt: { gte: todayStart } } 
+      }),
+      prisma.booking.count({ 
+        where: { courtId: { in: courtIds } } 
+      }),
+      prisma.booking.findMany({
+        where: { courtId: { in: courtIds } },
+        select: { playerId: true },
+        distinct: ['playerId'],
+      }),
+    ]);
+
+    res.json({
+      club,
+      stats: {
+        courtsCount: club.courts.length,
+        bookingsToday,
+        bookingsTotal,
+        uniquePlayersCount: uniquePlayers.length,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 };
