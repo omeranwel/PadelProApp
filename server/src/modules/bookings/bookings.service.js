@@ -4,7 +4,29 @@ import { getAvailability } from '../courts/courts.service.js';
 import { sendBookingConfirmation, sendRescheduleConfirmation } from '../../utils/email.js';
 
 export const createBooking = async (playerId, data) => {
+  console.log('[BOOKING SERVICE] createBooking input', { playerId, data });
   const { courtId, date, startTime, duration, paymentMethod } = data;
+
+  if (!playerId) {
+    const err = new Error('Player not authenticated');
+    err.status = 401;
+    throw err;
+  }
+  if (!courtId || !date || !startTime || !duration || !paymentMethod) {
+    const err = new Error('Missing required booking data');
+    err.status = 400;
+    throw err;
+  }
+  if (typeof startTime !== 'string' || !startTime.includes(':')) {
+    const err = new Error('Invalid startTime format');
+    err.status = 400;
+    throw err;
+  }
+  if (typeof duration !== 'number' || duration <= 0) {
+    const err = new Error('Invalid duration');
+    err.status = 400;
+    throw err;
+  }
 
   // 1. Verify court
   const court = await prisma.court.findUnique({ where: { id: courtId } });
@@ -30,13 +52,12 @@ export const createBooking = async (playerId, data) => {
   });
 
   if (existingSlots.length > 0) {
-    const err = new Error('Slot already booked — please choose another time');
-    err.status = 409;
-    throw err;
-  }
+      const err = new Error('Slot already booked — please choose another time');
+      err.status = 409;
+      throw err;
+    }
 
-  const totalAmount = court.pricePerHour * duration;
-
+    const totalAmount = court.pricePerHour * duration;
   // 3. Create Booking & Update Availability in Transaction
   const booking = await prisma.$transaction(async (tx) => {
     const b = await tx.booking.create({
