@@ -265,8 +265,8 @@ export const patchBooking = async (req, res, next) => {
           type: isCancel ? 'booking_cancelled' : 'booking_rescheduled',
           title: isCancel ? 'Booking Cancelled' : 'Booking Rescheduled',
           body: isCancel
-            ? \`Your booking at \${booking.court.clubName} on \${booking.date} has been cancelled. Reason: \${cancelReason || 'No reason given'}\`
-            : \`Your booking at \${booking.court.clubName} has been rescheduled to \${updated.date} \${updated.startTime}\`,
+            ? `Your booking at ${booking.court.clubName} on ${booking.date} has been cancelled. Reason: ${cancelReason || 'No reason given'}`
+            : `Your booking at ${booking.court.clubName} has been rescheduled to ${updated.date} ${updated.startTime}`,
           data: { bookingId: booking.id },
         },
       });
@@ -331,7 +331,7 @@ export const patchClub = async (req, res, next) => {
       for (let i = 1; i <= application.numberOfCourts; i++) {
         await prisma.court.create({
           data: {
-            name: \`Court \${i}\`,
+            name: `Court ${i}`,
             clubName: application.clubName,
             address: application.address,
             area: 'Central',
@@ -352,8 +352,8 @@ export const patchClub = async (req, res, next) => {
         type: status === 'APPROVED' ? 'club_approved' : 'club_rejected',
         title: status === 'APPROVED' ? '🎉 Club Application Approved!' : 'Club Application Update',
         body: status === 'APPROVED'
-          ? \`Congratulations! \${application.clubName} has been approved. You can now manage your club from the Club Dashboard.\`
-          : \`Your application for \${application.clubName} was not approved. Reason: \${reason || 'See support for details.'}\`,
+          ? `Congratulations! ${application.clubName} has been approved. You can now manage your club from the Club Dashboard.`
+          : `Your application for ${application.clubName} was not approved. Reason: ${reason || 'See support for details.'}`,
       },
     });
 
