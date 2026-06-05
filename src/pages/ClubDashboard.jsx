@@ -34,6 +34,9 @@ export default function ClubDashboard() {
   const [isSlotModalOpen, setIsSlotModalOpen] = useState(false);
   const [selectedCourt, setSelectedCourt] = useState(null);
   const [slotDate, setSlotDate] = useState(new Date().toISOString().split('T')[0]);
+  
+  const [isAddCourtModalOpen, setIsAddCourtModalOpen] = useState(false);
+  const [newCourt, setNewCourt] = useState({ name: '', surface: 'Indoor', pricePerHour: '', description: '' });
 
   useEffect(() => {
     // Wait for user to be hydrated; don't redirect if user is null yet
@@ -97,6 +100,17 @@ export default function ClubDashboard() {
       await api.post(`/courts/${selectedCourt.id}/slots`, { slots });
       toast.success(`Slots generated for ${slotDate}`);
       setIsSlotModalOpen(false);
+    } catch (err) { toast.error(err.message); }
+  };
+
+  const handleAddCourt = async () => {
+    if (!newCourt.name || !newCourt.pricePerHour) return toast.error('Name and price are required');
+    try {
+      await api.post('/clubs/courts', newCourt);
+      toast.success('Court added successfully!');
+      setIsAddCourtModalOpen(false);
+      setNewCourt({ name: '', surface: 'Indoor', pricePerHour: '', description: '' });
+      loadDashboard();
     } catch (err) { toast.error(err.message); }
   };
 
@@ -199,7 +213,10 @@ export default function ClubDashboard() {
                   </div>
                   
                   <div className="space-y-6">
-                    <h3 className="text-xl font-bold font-display">Court Management</h3>
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-xl font-bold font-display">Court Management</h3>
+                      <Button size="sm" onClick={() => setIsAddCourtModalOpen(true)} icon={Plus}>Add Court</Button>
+                    </div>
                     <div className="space-y-4">
                       {(dashboardData.club.courts || []).length > 0 ? (
                         dashboardData.club.courts.map(c => (
@@ -343,6 +360,29 @@ export default function ClubDashboard() {
             <div className="flex gap-4 pt-4">
               <Button variant="secondary" onClick={() => setIsSlotModalOpen(false)} className="flex-1">Cancel</Button>
               <Button onClick={generateDailySlots} className="flex-1">Generate</Button>
+            </div>
+          </div>
+        </Modal>
+
+        {/* Add Court Modal */}
+        <Modal isOpen={isAddCourtModalOpen} onClose={() => setIsAddCourtModalOpen(false)} className="max-w-md">
+          <h3 className="text-2xl font-bold font-display mb-6">Add New Court</h3>
+          <div className="space-y-4">
+            <Input label="Court Name" placeholder="e.g. Center Court" value={newCourt.name} onChange={e => setNewCourt({...newCourt, name: e.target.value})} />
+            <div className="space-y-1">
+              <label className="block text-xs font-bold uppercase tracking-wider text-text-muted pl-1">Surface Type</label>
+              <select className="w-full bg-bg-elevated border border-border rounded-xl px-4 py-3 text-text-primary focus:border-accent outline-none" value={newCourt.surface} onChange={e => setNewCourt({...newCourt, surface: e.target.value})}>
+                <option value="Indoor">Indoor (Standard)</option>
+                <option value="Outdoor">Outdoor</option>
+                <option value="Panoramic">Panoramic</option>
+              </select>
+            </div>
+            <Input label="Price Per Hour (Rs)" type="number" placeholder="2000" value={newCourt.pricePerHour} onChange={e => setNewCourt({...newCourt, pricePerHour: e.target.value})} />
+            <Input label="Description (Optional)" placeholder="Brief description of the court" value={newCourt.description} onChange={e => setNewCourt({...newCourt, description: e.target.value})} />
+            
+            <div className="flex gap-4 pt-4 mt-6">
+              <Button variant="secondary" onClick={() => setIsAddCourtModalOpen(false)} className="flex-1">Cancel</Button>
+              <Button onClick={handleAddCourt} className="flex-1" icon={Plus}>Add Court</Button>
             </div>
           </div>
         </Modal>

@@ -12,7 +12,12 @@ export const getClubOverviewFull = async (req, res) => {
     if (!club) return res.status(404).json({ message: 'Club not found. Your application may still be pending.' });
 
     const courts = club.courts || [];
-    const courtIds = courts.map(c => c.id);
+    // Also fetch courts by ownerId (created before clubId migration) and merge
+    const courtsByOwner = await prisma.court.findMany({ where: { ownerId: dbUser.id } });
+    const courtMap = new Map();
+    [...courts, ...courtsByOwner].forEach(c => courtMap.set(c.id, c));
+    const allCourts = Array.from(courtMap.values());
+    const courtIds = allCourts.map(c => c.id);
 
     const todayStart = new Date(); todayStart.setHours(0,0,0,0);
     const weekStart = new Date(Date.now() - 7*24*60*60*1000);
@@ -45,13 +50,13 @@ export const getClubOverviewFull = async (req, res) => {
     const [bookingsToday, bookingsThisWeek, bookingsTotal, revenueTotal, revenueThisMonth, uniquePlayers, upcomingBookings] = await Promise.all(bookingFilters);
 
     res.json({
-      club: { ...club, courts },
+      club: { ...club, courts: allCourts },
       stats: {
         bookingsToday, bookingsThisWeek, bookingsTotal,
         revenueTotal: revenueTotal._sum?.totalAmount || 0,
         revenueThisMonth: revenueThisMonth._sum?.totalAmount || 0,
         uniquePlayersCount: uniquePlayers.length,
-        courtsCount: courts.length,
+        courtsCount: allCourts.length,
       },
       upcomingBookings,
     });
@@ -150,6 +155,46 @@ export const getClubPlayers = async (req, res) => {
     });
 
     res.json({ players: Object.values(playerMap).sort((a, b) => b.visits - a.visits) });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// POST /api/clubs/courts
+export const addCourt = async (req, res) => {
+  try {
+    const dbUser = await getDbUser(req.user.uid);
+    const club = await prisma.club.findUnique({ where: { ownerId: dbUser.id } });
+    if (!club) return res.status(404).json({ message: 'Club not found' });
+
+    const { name, surface, pricePerHour, description } = req.body;
+    if (!name || !surface || !pricePerHour) return res.status(400).json({ message: 'Missing fields' });
+
+    const court = await prisma.court.create({
+      data: {
+        name,
+        surface,
+        pricePerHour: parseInt(pricePerHour),
+        description: description || '',
+        clubName: club.name,
+        address: club.address,
+        area: club.area,
+        city: club.city,
+        lat: 24.8607 + (Math.random() * 0.01), // mock lat
+        lng: 67.0011 + (Math.random() * 0.01), // mock lng
+        ownerId: dbUser.id,
+        clubId: club.id,
+        amenities: club.amenities || [],
+      }
+    });
+    
+    // Also update total courts count in Club
+    await prisma.club.update({
+      where: { id: club.id },
+      data: { totalCourts: { increment: 1 } }
+    });
+
+    res.status(201).json({ success: true, court });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

@@ -76,12 +76,18 @@ export default function PlayerProfile() {
   const handleChallenge = async () => {
     if (!isLoggedIn) { toast.error('Please log in first'); return; }
     if (friendStatus === 'friends' || friendStatus === 'request_sent') return;
+    
+    // Optimistic UI update
+    const prevStatus = friendStatus;
+    setFriendStatus('request_sent');
+    if (sendRequest) sendRequest(id);
+    
     setSending(true);
     try {
       await playerService.sendRequest(id);
-      setFriendStatus('request_sent');
       toast.success(`Challenge sent to ${player.name}!`);
     } catch (err) {
+      setFriendStatus(prevStatus); // Revert
       toast.error(err.message || 'Failed to send request');
     } finally {
       setSending(false);

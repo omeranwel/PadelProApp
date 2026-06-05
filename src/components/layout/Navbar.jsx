@@ -145,9 +145,10 @@ const Navbar = () => {
                   )}
                 </AnimatePresence>
               </div>
-              <div className="relative group">
+              <div className="relative group pb-2">
                 <button className="flex items-center gap-2"><Avatar name={user?.name} src={user?.avatarUrl} size="sm" /></button>
-                <div className="absolute right-0 mt-2 w-52 bg-bg-elevated border border-border rounded-2xl p-2 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all translate-y-2 group-hover:translate-y-0 shadow-2xl">
+                <div className="absolute right-0 top-full pt-2 w-52 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all z-50">
+                  <div className="bg-bg-elevated border border-border rounded-2xl p-2 shadow-2xl translate-y-2 group-hover:translate-y-0 transition-transform">
                   {[
                     ...(user?.role === 'APP_ADMIN' ? [{label:'Admin Dashboard',path:'/admin'}] : []),
                     ...((user?.role === 'CLUB_ADMIN' || user?.role === 'CLUB_OWNER') ? [{label:'Club Dashboard',path:'/club'}] : []),
@@ -161,6 +162,7 @@ const Navbar = () => {
                   ))}
                   <div className="h-px bg-border my-1" />
                   <button onClick={logout} className="block w-full text-left px-3 py-2.5 text-sm font-bold text-danger hover:bg-danger/10 rounded-xl">Sign Out</button>
+                  </div>
                 </div>
               </div>
             </>

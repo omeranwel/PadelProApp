@@ -12,5 +12,6 @@ router.get('/overview', verifyToken, requireClubOwner, ownerCtrl.getClubOverview
 router.get('/bookings', verifyToken, requireClubOwner, ownerCtrl.getClubBookings);
 router.patch('/bookings/:id', verifyToken, requireClubOwner, ownerCtrl.updateClubBooking);
 router.get('/players', verifyToken, requireClubOwner, ownerCtrl.getClubPlayers);
+router.post('/courts', verifyToken, requireClubOwner, ownerCtrl.addCourt);
 
 export default router;

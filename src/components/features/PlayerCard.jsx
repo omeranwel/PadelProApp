@@ -61,12 +61,18 @@ const PlayerCard = ({
   const handleChallenge = async () => {
     if (!isLoggedIn) { toast.error('Please log in first'); return; }
     if (status === 'friends' || status === 'request_sent') return;
+    
+    // Optimistic UI update
+    const prevStatus = status;
+    setStatus('request_sent');
+    if (sendRequest) sendRequest(player.id);
+    
     try {
       await playerService.sendRequest(player.id);
-      setStatus('request_sent');
-      sendRequest && sendRequest(player.id);
       toast.success(`Challenge sent to ${player.name}!`);
     } catch (err) {
+      // Revert on failure
+      setStatus(prevStatus);
       toast.error(err.message || 'Failed to send challenge');
     }
   };
