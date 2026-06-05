@@ -18,6 +18,7 @@ import Spinner from '../components/ui/Spinner';
 const CourtDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const courtId = id;
   const [court, setCourt] = useState(null);
   const [courtLoading, setCourtLoading] = useState(true);
   
@@ -51,12 +52,12 @@ const CourtDetail = () => {
   const [slots, setSlots] = useState({});
 
   useEffect(() => {
-    if (court?.id && selectedDate) {
-      courtService.getAvailability(court.id, selectedDate)
+    if (courtId && selectedDate) {
+      courtService.getAvailability(courtId, selectedDate)
         .then(res => setSlots(res.data || res))
         .catch(() => setSlots({}));
     }
-  }, [court?.id, selectedDate]);
+  }, [courtId, selectedDate]);
 
   const times = [
     "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", 
@@ -76,7 +77,7 @@ const CourtDetail = () => {
     setBookingLoading(true);
     try {
       const result = await courtService.createBooking({
-        courtId: court.id,
+        courtId,
         date: selectedDate,
         startTime: selectedSlot,
         duration,
@@ -91,7 +92,7 @@ const CourtDetail = () => {
         setSelectedSlot(null); // reset slot selection
         setIsBookingModalOpen(false); // Can close modal to let them select
         // Re-fetch availability to show updated state
-        const fresh = await courtService.getAvailability(court.id, selectedDate);
+        const fresh = await courtService.getAvailability(courtId, selectedDate);
         setSlots(fresh.data || fresh);
       } else {
         toast.error(err.response?.data?.error || 'Booking failed. Please try again.');
