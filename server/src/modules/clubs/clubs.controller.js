@@ -45,10 +45,51 @@ export const applyForClub = async (req, res, next) => {
         businessDocument: businessDocument || null,
         ownerCnic,
         ownerPhone,
+        status: 'APPROVED', // Auto-approve for prototype
       },
     });
 
-    res.status(201).json({ success: true, applicationId: application.id });
+    // Auto-create the club and update user role to CLUB_ADMIN
+    const club = await prisma.club.create({
+      data: {
+        name: clubName,
+        ownerId: dbUser.id,
+        businessType,
+        city,
+        address,
+      }
+    });
+
+    // Create the requested number of courts
+    const courtOps = Array.from({ length: parseInt(numberOfCourts) || 1 }).map((_, i) => {
+      return prisma.court.create({
+        data: {
+          name: `Court ${i + 1}`,
+          clubName: clubName,
+          address,
+          area: city,
+          city,
+          lat: 24.8607 + (Math.random() * 0.01), // mock coord near Karachi
+          lng: 67.0011 + (Math.random() * 0.01),
+          surface: surfaces?.[0] || 'Indoor',
+          amenities: facilities || [],
+          pricePerHour: parseInt(weekdayPrice) || 2000,
+          description: `Premium padel court at ${clubName}`,
+          ownerId: dbUser.id,
+          clubId: club.id
+        }
+      });
+    });
+
+    await Promise.all(courtOps);
+
+    // Update user role
+    await prisma.user.update({
+      where: { id: dbUser.id },
+      data: { role: 'CLUB_ADMIN' }
+    });
+
+    res.status(201).json({ success: true, applicationId: application.id, clubId: club.id });
   } catch (err) {
     console.error('Club application error:', err);
     res.status(500).json({ message: 'Failed to submit application', error: err.message });

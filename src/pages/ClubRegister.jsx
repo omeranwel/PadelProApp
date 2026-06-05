@@ -9,6 +9,7 @@ import Input from '../components/ui/Input';
 import Badge from '../components/ui/Badge';
 import { api } from '../services/api';
 import { uploadImage } from '../services/uploadService';
+import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
 
 const STEPS = ['Identity', 'Details', 'Hours & Pricing', 'Photos', 'Review'];
@@ -57,8 +58,13 @@ export default function ClubRegister() {
         ...formData,
         photos: images
       });
-      toast.success('Application submitted successfully!');
-      navigate('/dashboard');
+      toast.success('Club created and approved successfully!');
+      
+      // Re-sync user to get the new CLUB_ADMIN role immediately
+      const syncRes = await api.post('/auth/sync');
+      useAuthStore.setState({ user: syncRes.user });
+
+      navigate('/club'); // Redirect directly to the club dashboard
     } catch (err) {
       toast.error(err.response?.data?.message || err.message || 'Submission failed');
     } finally {
