@@ -49,8 +49,14 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 app.use((req, res, next) => {
-  console.log('[API] incoming request', req.method, req.originalUrl);
-  logger.info({ method: req.method, url: req.originalUrl }, 'Incoming API request');
+  console.log('[API PATH]', {
+    method: req.method,
+    originalUrl: req.originalUrl,
+    url: req.url,
+    path: req.path,
+    baseUrl: req.baseUrl,
+  });
+  logger.info({ method: req.method, url: req.originalUrl, path: req.path }, 'Incoming API request');
   next();
 });
 
