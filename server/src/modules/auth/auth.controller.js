@@ -12,7 +12,7 @@ export const syncUser = async (req, res, next) => {
     if (user) {
       user = await prisma.user.update({
         where: { email },
-        update: { 
+        data: { 
           firebaseUid: uid,
           lastActive: new Date(),
           ...(name && { name }),
