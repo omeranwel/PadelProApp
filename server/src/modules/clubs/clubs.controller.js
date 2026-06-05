@@ -54,9 +54,15 @@ export const applyForClub = async (req, res, next) => {
       data: {
         name: clubName,
         ownerId: dbUser.id,
-        businessType,
         city,
         address,
+        area: city, // Fallback area to city since we don't have it
+        contactPhone: ownerPhone,
+        amenities: facilities || [],
+        operatingHours: operatingHours || {},
+        totalCourts: parseInt(numberOfCourts) || 1,
+        coverImage: photos && photos.length > 0 ? photos[0] : null,
+        isApproved: true,
       }
     });
 
