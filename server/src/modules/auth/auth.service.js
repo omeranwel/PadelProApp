@@ -20,19 +20,11 @@ export const register = async ({ name, email, password, phone, role, skillLevel 
 
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
   const user = await prisma.user.create({
-    data: { name, email, passwordHash, phone, role: role || 'PLAYER', skillLevel: skillLevel || 'beginner' },
+    data: { name, email, passwordHash, phone, role: role || 'PLAYER', skillLevel: skillLevel || 'beginner', isVerified: true },
     select: safeUserSelect
   });
 
-  // Send email OTP for verification
-  try {
-    const otp = await generateOtp(email);
-    await sendOtpEmail(email, otp, name);
-  } catch (otpErr) {
-    console.error('Failed to send OTP:', otpErr.message);
-  }
-
-  return { user, requiresVerification: true, message: 'Registration successful. Please check your email for the verification code.' };
+  return { user };
 };
 
 export const login = async (email, password) => {
@@ -42,11 +34,6 @@ export const login = async (email, password) => {
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) { const err = new Error('Invalid credentials'); err.status = 401; throw err; }
 
-  if (!user.isVerified) {
-    // Resend OTP
-    try { const otp = await generateOtp(email); await sendOtpEmail(email, otp, user.name); } catch {}
-    const err = new Error('Email not verified. A new code has been sent to your email.'); err.status = 403; err.requiresVerification = true; err.email = email; throw err;
-  }
 
   const safeUser = await prisma.user.findUnique({ where: { id: user.id }, select: safeUserSelect });
   const accessToken = signAccessToken({ id: user.id, role: user.role });

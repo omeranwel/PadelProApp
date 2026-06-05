@@ -17,6 +17,7 @@ export const syncUser = async (req, res, next) => {
           lastActive: new Date(),
           ...(name && { name }),
           ...(picture && { avatarUrl: picture }),
+          isVerified: true,
         },
       });
     } else {
@@ -30,7 +31,7 @@ export const syncUser = async (req, res, next) => {
           skillLevel: 'beginner',
           skillRating: 3.0,
           profileComplete: false,
-          isVerified: false,
+          isVerified: true,
           city: 'Karachi', // default
         },
       });

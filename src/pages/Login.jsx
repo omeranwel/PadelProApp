@@ -26,8 +26,6 @@ export default function Login() {
       
       if (isNewUser) {
         navigate('/onboarding');
-      } else if (!user.isVerified) {
-        navigate('/verify-email');
       } else {
         navigate(redirect || '/dashboard');
       }
