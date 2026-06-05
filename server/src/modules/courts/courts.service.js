@@ -1,6 +1,21 @@
 import prisma from '../../config/db.js';
 import { format, addDays } from 'date-fns';
 
+const resolveLegacyCourtId = async (id) => {
+  if (!id || !/^court-\d+$/.test(id)) return id;
+
+  const index = Number.parseInt(id.split('-')[1], 10) - 1;
+  if (Number.isNaN(index) || index < 0) return id;
+
+  const courts = await prisma.court.findMany({
+    where: { isActive: true },
+    orderBy: { createdAt: 'asc' },
+    take: index + 1
+  });
+
+  return courts[index]?.id || id;
+};
+
 export const getCourts = async (filters = {}) => {
   const { area, surface, minPrice, maxPrice, sort } = filters;
 
@@ -87,8 +102,9 @@ export const getCourts = async (filters = {}) => {
 };
 
 export const getCourtById = async (id) => {
+  const resolvedId = await resolveLegacyCourtId(id);
   const court = await prisma.court.findUnique({
-    where: { id },
+    where: { id: resolvedId },
     include: {
       images: { orderBy: { isPrimary: 'desc' } },
       reviews: {
@@ -115,8 +131,9 @@ export const getCourtById = async (id) => {
 };
 
 export const getAvailability = async (courtId, date) => {
+  const resolvedCourtId = await resolveLegacyCourtId(courtId);
   const availability = await prisma.availability.findMany({
-    where: { courtId, date }
+    where: { courtId: resolvedCourtId, date }
   });
 
   const slots = {};

@@ -21,23 +21,14 @@ const CourtDetail = () => {
   const courtId = id;
   const [court, setCourt] = useState(null);
   const [courtLoading, setCourtLoading] = useState(true);
-
-  const isValidCourtId = (value) =>
-    typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
   
   useEffect(() => {
-    if (!isValidCourtId(courtId)) {
-      toast.error('Invalid court link');
-      navigate('/courts', { replace: true });
-      return;
-    }
-
     setCourtLoading(true);
     courtService.getCourtById(id)
       .then(res => setCourt(res.data || res))
       .catch(() => { toast.error('Court not found'); navigate('/courts'); })
       .finally(() => setCourtLoading(false));
-  }, [courtId, navigate]);
+  }, [id, navigate]);
 
   const today = new Date();
   const dates = Array.from({ length: 7 }, (_, i) => {
@@ -61,12 +52,12 @@ const CourtDetail = () => {
   const [slots, setSlots] = useState({});
 
   useEffect(() => {
-    if (courtId && selectedDate) {
-      courtService.getAvailability(courtId, selectedDate)
+    if (court?.id && selectedDate) {
+      courtService.getAvailability(court.id, selectedDate)
         .then(res => setSlots(res.data || res))
         .catch(() => setSlots({}));
     }
-  }, [courtId, selectedDate]);
+  }, [court?.id, selectedDate]);
 
   const times = [
     "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", 
@@ -86,7 +77,7 @@ const CourtDetail = () => {
     setBookingLoading(true);
     try {
       const result = await courtService.createBooking({
-        courtId,
+        courtId: court?.id || courtId,
         date: selectedDate,
         startTime: selectedSlot,
         duration,
@@ -101,7 +92,7 @@ const CourtDetail = () => {
         setSelectedSlot(null); // reset slot selection
         setIsBookingModalOpen(false); // Can close modal to let them select
         // Re-fetch availability to show updated state
-        const fresh = await courtService.getAvailability(courtId, selectedDate);
+        const fresh = await courtService.getAvailability(court?.id || courtId, selectedDate);
         setSlots(fresh.data || fresh);
       } else {
         toast.error(err.response?.data?.error || 'Booking failed. Please try again.');
