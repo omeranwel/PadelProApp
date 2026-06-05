@@ -166,10 +166,30 @@ const CourtDetail = () => {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                   <h1 className="text-4xl font-bold font-display mb-2">{court.name}</h1>
-                  <p className="flex items-center gap-1.5 text-text-secondary font-medium">
-                    <MapPin size={18} className="text-accent-blue" />
-                    {court.address}, {court.area}
-                  </p>
+                  <div className="flex flex-col gap-2 mt-2">
+                    <p className="flex items-center gap-1.5 text-text-secondary font-medium">
+                      <MapPin size={18} className="text-accent-blue" />
+                      {court.address}, {court.area}
+                    </p>
+                    {court.owner && (
+                      <div 
+                        onClick={() => navigate(`/players/${court.owner.id}`)}
+                        className="flex items-center gap-3 mt-1 cursor-pointer group w-fit p-2 -ml-2 rounded-xl hover:bg-bg-elevated transition-colors"
+                      >
+                        <div className="w-8 h-8 rounded-full overflow-hidden bg-bg-elevated border border-border">
+                          {court.owner.avatarUrl ? (
+                            <img src={court.owner.avatarUrl} alt={court.owner.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-xs font-bold text-text-muted">{court.owner.name?.charAt(0)}</div>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-xs text-text-muted font-bold uppercase tracking-wide">Club Admin</p>
+                          <p className="text-sm text-text-primary group-hover:text-accent font-medium transition-colors">{court.owner.name}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-4 bg-bg-card p-3 rounded-2xl border border-border self-start">
                    <div className="flex items-center gap-1">

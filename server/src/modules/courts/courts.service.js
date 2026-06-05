@@ -40,6 +40,7 @@ export const getCourts = async (filters = {}) => {
     where,
     orderBy: sort === 'rating' ? undefined : (Object.keys(orderBy).length ? orderBy : { createdAt: 'desc' }),
     include: {
+      owner: { select: { id: true, name: true, avatarUrl: true, email: true, phone: true } },
       images: { orderBy: { isPrimary: 'desc' } },
       reviews: true
     }
@@ -79,6 +80,7 @@ export const getCourts = async (filters = {}) => {
       id: court.id,
       name: court.name,
       club: court.clubName,
+      owner: court.owner,
       address: court.address,
       area: court.area,
       lat: court.lat,
@@ -106,6 +108,7 @@ export const getCourtById = async (id) => {
   const court = await prisma.court.findUnique({
     where: { id: resolvedId },
     include: {
+      owner: { select: { id: true, name: true, avatarUrl: true, email: true, phone: true } },
       images: { orderBy: { isPrimary: 'desc' } },
       reviews: {
         include: { author: { select: { name: true, avatarUrl: true } } },
@@ -124,6 +127,7 @@ export const getCourtById = async (id) => {
   return {
     ...court,
     club: court.clubName,
+    owner: court.owner,
     rating,
     reviewCount,
     images: court.images.map(img => img.url)

@@ -151,10 +151,11 @@ const Navbar = () => {
                   {[
                     ...(user?.role === 'APP_ADMIN' ? [{label:'Admin Dashboard',path:'/admin'}] : []),
                     ...((user?.role === 'CLUB_ADMIN' || user?.role === 'CLUB_OWNER') ? [{label:'Club Dashboard',path:'/club'}] : []),
-                    {label:'Dashboard',path:'/dashboard'},
-                    {label:'My Bookings',path:'/bookings'},
-                    {label:'Profile',path:'/profile'},
-                    {label:'Messages',path:'/chat'}
+                    { label: 'Dashboard', path: '/dashboard' },
+                    { label: 'My Friends', path: '/friends' },
+                    { label: 'My Bookings', path: '/bookings' },
+                    { label: 'Profile', path: '/profile' },
+                    { label: 'Messages', path: '/chat' }
                   ].map(({label,path}) => (
                     <Link key={path} to={path} className="block px-3 py-2.5 text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-bg-subtle rounded-xl transition-all">{label}</Link>
                   ))}

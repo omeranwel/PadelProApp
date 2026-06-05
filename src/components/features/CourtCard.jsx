@@ -62,11 +62,28 @@ const CourtCard = ({ court }) => {
         </div>
 
         <div className="p-5 flex flex-col h-full">
-          <div className="mb-4">
             <h3 className="text-xl font-bold font-display group-hover:text-accent-blue transition-colors truncate">
               {court.name}
             </h3>
-            <p className="text-xs text-text-secondary mt-1">{court.club}</p>
+            {court.owner ? (
+              <div 
+                onClick={(e) => { e.stopPropagation(); navigate(`/players/${court.owner.id}`); }}
+                className="flex items-center gap-2 mt-2 group/owner cursor-pointer hover:bg-bg-elevated p-1 -ml-1 rounded-lg transition-colors w-fit"
+              >
+                <div className="w-5 h-5 rounded-full overflow-hidden bg-bg-elevated border border-border">
+                  {court.owner.avatarUrl ? (
+                    <img src={court.owner.avatarUrl} alt={court.owner.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-[8px] font-bold text-text-muted">{court.owner.name?.charAt(0)}</div>
+                  )}
+                </div>
+                <p className="text-xs text-text-secondary group-hover/owner:text-accent transition-colors">
+                  {court.club} <span className="text-text-muted opacity-50 px-1">•</span> {court.owner.name}
+                </p>
+              </div>
+            ) : (
+              <p className="text-xs text-text-secondary mt-1">{court.club}</p>
+            )}
           </div>
 
           <div className="flex flex-wrap gap-3 mb-6">
