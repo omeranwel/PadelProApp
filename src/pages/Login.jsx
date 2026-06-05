@@ -14,7 +14,7 @@ import { useAuthStore } from '../store/authStore';
 export default function Login() {
   const navigate = useNavigate();
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = async (isClubRegistration = false) => {
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
@@ -24,7 +24,9 @@ export default function Login() {
       
       useAuthStore.setState({ user, isLoggedIn: true, token: await result.user.getIdToken() });
       
-      if (isNewUser) {
+      if (isClubRegistration === true) {
+        navigate('/register/club');
+      } else if (isNewUser) {
         navigate('/onboarding');
       } else {
         navigate(redirect || '/dashboard');
@@ -61,7 +63,7 @@ export default function Login() {
             <Button onClick={() => navigate('/register')} variant="outline" className="w-full justify-center">
               Create Player Account
             </Button>
-            <Button onClick={() => navigate('/register/club')} variant="outline" className="w-full justify-center border-accent-blue text-accent-blue hover:bg-accent-blue/10">
+            <Button onClick={() => handleGoogleSignIn(true)} variant="outline" className="w-full justify-center border-accent-blue text-accent-blue hover:bg-accent-blue/10">
               Register Your Club
             </Button>
           </div>

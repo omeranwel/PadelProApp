@@ -46,6 +46,11 @@ export default function ClubRegister() {
   };
 
   const handleSubmit = async () => {
+    if (!formData.clubName || !formData.city || !formData.address || !formData.ownerPhone || !formData.ownerCnic) {
+      toast.error('Please fill all required fields before submitting.');
+      return;
+    }
+    
     setLoading(true);
     try {
       await api.post('/clubs/apply', {
@@ -53,9 +58,9 @@ export default function ClubRegister() {
         photos: images
       });
       toast.success('Application submitted successfully!');
-      navigate('/dashboard'); // or wait page
+      navigate('/dashboard');
     } catch (err) {
-      toast.error(err.message || 'Submission failed');
+      toast.error(err.response?.data?.message || err.message || 'Submission failed');
     } finally {
       setLoading(false);
     }
