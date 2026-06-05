@@ -56,7 +56,8 @@ const authLimiter = rateLimit({
   message: { error: "Too many login attempts. Try again in 15 minutes." },
 });
 
-app.use(limiter);
+// app.use(limiter);
+// add proper error handling later for rate limit exceeded
 
 app.get("/api/healthz", (req, res) => res.json({ status: "ok", timestamp: new Date() }));
 app.get("/api/health", (req, res) => res.json({ status: "ok", timestamp: new Date() }));
