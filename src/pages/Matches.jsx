@@ -14,6 +14,7 @@ import LogResultModal from '../components/features/LogResultModal';
 import { useMatchStore } from '../store/matchStore';
 import { useAuthStore } from '../store/authStore';
 import { playerService } from '../services/playerService';
+import { api } from '../services/api';
 import toast from 'react-hot-toast';
 
 const Matches = () => {
@@ -22,7 +23,7 @@ const Matches = () => {
   const [showResults, setShowResults] = useState(false);
   
   const { suggestions, requests, fetchSuggestions, loading, addRequest } = useMatchStore();
-  const { isLoggedIn } = useAuthStore();
+  const { isLoggedIn, user } = useAuthStore();
   const [skillFilter, setSkillFilter] = useState([]);
   const [maxDistance, setMaxDistance] = useState(50);
   const [activeTab, setActiveTab] = useState('active');
@@ -92,7 +93,7 @@ const Matches = () => {
   const filteredPlayers = useMemo(() => {
     if (!suggestions || !suggestions.length) return [];
     return suggestions.filter(p => {
-      if (skillFilter.length > 0 && !skillFilter.includes(p.skillLevel.toLowerCase())) return false;
+      if (skillFilter.length > 0 && !skillFilter.includes((p.skillLevel || '').toLowerCase())) return false;
       const dist = Number(p.distance);
       if (dist > maxDistance) return false;
       return true;

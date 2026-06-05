@@ -36,7 +36,10 @@ export default function ClubDashboard() {
   const [slotDate, setSlotDate] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
-    if (!user || user.role !== 'CLUB_OWNER') { navigate('/'); return; }
+    // Wait for user to be hydrated; don't redirect if user is null yet
+    if (user === undefined) return;
+    const allowedRoles = ['CLUB_OWNER', 'CLUB_ADMIN', 'APP_ADMIN'];
+    if (!user || !allowedRoles.includes(user.role)) { navigate('/'); return; }
     loadDashboard();
   }, [user, navigate]);
 
@@ -95,7 +98,8 @@ export default function ClubDashboard() {
     } catch (err) { toast.error(err.message); }
   };
 
-  if (user?.role !== 'CLUB_OWNER') return null;
+  const allowedRoles = ['CLUB_OWNER', 'CLUB_ADMIN', 'APP_ADMIN'];
+  if (!user || !allowedRoles.includes(user.role)) return null;
 
   return (
     <PageWrapper>
