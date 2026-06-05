@@ -11,11 +11,11 @@ import Chatbot from './components/features/Chatbot';
 import Spinner from './components/ui/Spinner';
 import ErrorBoundary from './components/layout/ErrorBoundary';
 import NotificationToast from './components/ui/NotificationToast';
+import CourtDetail from './pages/CourtDetail';
 
 const NotFound = lazy(() => import('./pages/NotFound'));
 const Home = lazy(() => import('./pages/Home'));
 const Courts = lazy(() => import('./pages/Courts'));
-const CourtDetail = lazy(() => import('./pages/CourtDetail'));
 const Matches = lazy(() => import('./pages/Matches'));
 const Market = lazy(() => import('./pages/Market'));
 const ProductDetail = lazy(() => import('./pages/ProductDetail'));
