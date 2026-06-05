@@ -33,6 +33,7 @@ const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
 const ClubRegister = lazy(() => import('./pages/ClubRegister'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
+const PlayerProfile = lazy(() => import('./pages/PlayerProfile'));
 
 const ProtectedRoute = ({ children }) => {
   const { isLoggedIn } = useAuthStore();
@@ -89,6 +90,7 @@ const App = () => {
           <Route path="/register/club" element={<ProtectedRoute><ClubRegister /></ProtectedRoute>} />
           <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
           <Route path="/matches" element={<ProtectedRoute><ErrorBoundary><Matches /></ErrorBoundary></ProtectedRoute>} />
+          <Route path="/players/:id" element={<ErrorBoundary><PlayerProfile /></ErrorBoundary>} />
           <Route path="/market/sell" element={<ProtectedRoute><SellItem /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/bookings" element={<ProtectedRoute><Bookings /></ProtectedRoute>} />

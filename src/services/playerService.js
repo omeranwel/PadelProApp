@@ -19,8 +19,8 @@ export const playerService = {
   },
   logMatch: async (data) => api.post('/players/me/log-match', data),
   getMyStats: async () => api.get('/players/me/stats'),
-  getRequests: async (type = 'received') => api.get(`/friends/requests`), // Note: friends API only returns pending received requests by default, but we can adjust if needed
-  sendRequest: async (receiverId, message) => api.post('/friends/request', { receiverId, message }),
-  updateRequest: async (id, status) => api.post(`/friends/respond/${id}`, { action: status === 'accepted' ? 'accept' : 'decline' }),
-  cancelRequest: async (id) => api.post(`/friends/respond/${id}`, { action: 'decline' }),
+  getRequests: async () => api.get(`/friends/requests`),
+  sendRequest: async (targetUserId) => api.post('/friends/request', { targetUserId }),
+  updateRequest: async (id, status) => api.patch(`/friends/request/${id}`, { action: status === 'accepted' ? 'accept' : 'decline' }),
+  cancelRequest: async (id) => api.patch(`/friends/request/${id}`, { action: 'decline' }),
 };
