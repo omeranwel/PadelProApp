@@ -57,6 +57,7 @@
     "express": "latest",
     "express-rate-limit": "latest",
     "firebase": "^12.14.0",
+    "firebase-admin": "^13.10.0",
     "framer-motion": "^12.38.0",
     "helmet": "latest",
     "input-otp": "^1.4.2",
