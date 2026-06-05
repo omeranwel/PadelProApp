@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { addDays, format, isToday, isTomorrow } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,15 +11,24 @@ import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
-import { mockCourts } from '../data/mockCourts';
 import { courtService } from '../services/courtService';
 import toast from 'react-hot-toast';
+import Spinner from '../components/ui/Spinner';
 
 const CourtDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const court = mockCourts.find(c => c.id === id) || mockCourts[0];
+  const [court, setCourt] = useState(null);
+  const [courtLoading, setCourtLoading] = useState(true);
   
+  useEffect(() => {
+    setCourtLoading(true);
+    courtService.getCourtById(id)
+      .then(res => setCourt(res.data || res))
+      .catch(() => { toast.error('Court not found'); navigate('/courts'); })
+      .finally(() => setCourtLoading(false));
+  }, [id]);
+
   const today = new Date();
   const dates = Array.from({ length: 7 }, (_, i) => {
     const d = addDays(today, i);
@@ -41,11 +50,11 @@ const CourtDetail = () => {
   const [selectedPayment, setSelectedPayment] = useState('card');
   const [slots, setSlots] = useState({});
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (court?.id && selectedDate) {
       courtService.getAvailability(court.id, selectedDate)
         .then(res => setSlots(res.data || res))
-        .catch(err => setSlots({}));
+        .catch(() => setSlots({}));
     }
   }, [court?.id, selectedDate]);
 
@@ -102,6 +111,12 @@ const CourtDetail = () => {
 
   return (
     <PageWrapper>
+      {courtLoading || !court ? (
+        <div className="h-screen flex items-center justify-center">
+          <Spinner size="lg" />
+        </div>
+      ) : (
+      <>
       <div className="max-w-7xl mx-auto px-6 pb-20">
         {/* Navigation / Actions */}
         <div className="flex items-center justify-between mb-8">
@@ -314,6 +329,7 @@ const CourtDetail = () => {
       </div>
 
       {/* Confirmation Modal */}
+      {court && (
       <Modal 
         isOpen={isBookingModalOpen} 
         onClose={() => setIsBookingModalOpen(false)}
@@ -370,6 +386,9 @@ const CourtDetail = () => {
            )}
         </div>
       </Modal>
+      )}
+      </>
+      )}
     </PageWrapper>
   );
 };
