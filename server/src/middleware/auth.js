@@ -1,4 +1,5 @@
 import admin from 'firebase-admin';
+import prisma from '../config/db.js';
 
 // Initialize only once
 if (!admin.apps.length && process.env.FIREBASE_SERVICE_ACCOUNT) {
@@ -24,6 +25,14 @@ export const verifyToken = async (req, res, next) => {
   try {
     const decoded = await admin.auth().verifyIdToken(token);
     req.user = decoded; // { uid, email, name, picture, ... }
+
+    const dbUser = await prisma.user.findUnique({ where: { firebaseUid: decoded.uid } });
+    if (dbUser) {
+      req.user.id = dbUser.id;
+    } else if (req.path !== '/sync') {
+      return res.status(401).json({ message: 'User not found in database' });
+    }
+
     next();
   } catch (err) {
     console.error('Token verification failed:', err.code, err.message);
