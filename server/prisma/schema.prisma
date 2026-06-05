@@ -61,6 +61,8 @@ model User {
   matchmakingEnabled Boolean   @default(true)
   profileComplete    Boolean   @default(false)
   isVerified         Boolean   @default(false)
+  emailVerified      Boolean   @default(false)
+  banned             Boolean   @default(false)
   totalWins          Int       @default(0)
   totalLosses        Int       @default(0)
   winRate            Float     @default(0)
@@ -79,6 +81,11 @@ model User {
   receivedRequests    MatchRequest[] @relation("ReceivedRequests")
   posts               Post[]
   sentMessages        Message[]      @relation("SentMessages")
+  conversations       ConversationParticipant[]
+  friends             Friendship[]   @relation("FriendshipUser")
+  friendOf            Friendship[]   @relation("FriendshipFriend")
+  sentFriendRequests     FriendRequest[] @relation("FriendRequestSender")
+  receivedFriendRequests FriendRequest[] @relation("FriendRequestReceiver")
   notifications       Notification[]
   courtReviews        Review[]
   savedListings       SavedListing[]
@@ -159,11 +166,18 @@ model Booking {
   date          String
   startTime     String
   duration      Int
+  durationMinutes Int?
   totalAmount   Int
+  totalPrice    Int?
   paymentMethod String        @default("cash")
   status        BookingStatus @default(CONFIRMED)
   reviewSent    Boolean       @default(false)
+  notes         String?
+  cancelReason  String?
+  cancelledAt   DateTime?
+  cancelledBy   String?
   createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @default(now()) @updatedAt
 
   @@map("bookings")
 }
@@ -178,9 +192,12 @@ model Match {
   team1       String[]
   team2       String[]
   score       Json     @default("{}")
+  winnerId    String?
   courtId     String?
   court       Court?   @relation(fields: [courtId], references: [id])
   date        DateTime @default(now())
+  scheduledAt DateTime?
+  completedAt DateTime?
   status      String   @default("completed")
   createdById String
   createdBy   User     @relation("MatchCreator", fields: [createdById], references: [id])
@@ -359,14 +376,28 @@ model Review {
 
 model Conversation {
   id           String    @id @default(uuid())
-  participant1 String
-  participant2 String
+  participant1 String?
+  participant2 String?
+  participants ConversationParticipant[]
   messages     Message[]
+  lastMessageAt DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
   @@unique([participant1, participant2])
   @@map("conversations")
+}
+
+model ConversationParticipant {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  userId         String
+  user           User         @relation(fields: [userId], references: [id])
+  unreadCount    Int          @default(0)
+
+  @@unique([conversationId, userId])
+  @@map("conversation_participants")
 }
 
 model Message {
@@ -375,8 +406,11 @@ model Message {
   conversation   Conversation @relation(fields: [conversationId], references: [id])
   senderId       String
   sender         User         @relation("SentMessages", fields: [senderId], references: [id])
+  receiverId     String?
   content        String
   isRead         Boolean      @default(false)
+  read           Boolean      @default(false)
+  readAt         DateTime?
   createdAt      DateTime     @default(now())
 
   @@map("messages")
@@ -385,10 +419,14 @@ model Message {
 model Notification {
   id        String   @id @default(uuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   type      String
-  message   String
+  title     String?
+  message   String?
+  body      String?
+  data      Json?
   isRead    Boolean  @default(false)
+  read      Boolean  @default(false)
   link      String?
   createdAt DateTime @default(now())
 
@@ -468,7 +506,7 @@ model PostLike {
 
 model ClubApplication {
   id               String    @id @default(uuid())
-  ownerId          String
+  ownerId          String    @unique
   owner            User      @relation(fields: [ownerId], references: [id])
   
   clubName         String
@@ -500,4 +538,30 @@ model ClubApplication {
   updatedAt        DateTime  @updatedAt
 
   @@map("club_applications")
+}
+
+model Friendship {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation("FriendshipUser", fields: [userId], references: [id])
+  friendId  String
+  friend    User     @relation("FriendshipFriend", fields: [friendId], references: [id])
+  createdAt DateTime @default(now())
+  
+  @@unique([userId, friendId])
+  @@map("friendships")
+}
+
+model FriendRequest {
+  id         String   @id @default(uuid())
+  senderId   String
+  sender     User     @relation("FriendRequestSender", fields: [senderId], references: [id])
+  receiverId String
+  receiver   User     @relation("FriendRequestReceiver", fields: [receiverId], references: [id])
+  status     String   @default("PENDING")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([senderId, receiverId])
+  @@map("friend_requests")
 }

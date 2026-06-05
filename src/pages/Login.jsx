@@ -37,41 +37,35 @@ export default function Login() {
 
   return (
     <PageWrapper>
-      <div className="max-w-4xl mx-auto px-6 py-20">
-        <div className="text-center mb-16">
-          <h1 className="text-5xl font-bold font-display mb-4">Welcome to PadelPro</h1>
-          <p className="text-text-secondary text-lg">How would you like to continue?</p>
-        </div>
+      <div className="max-w-md mx-auto px-6 py-20">
+        <Card className="p-8">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold font-display mb-2">Welcome Back</h1>
+            <p className="text-text-secondary">Sign in to your PadelPro account</p>
+          </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
-          {/* Player Path */}
-          <Card className="p-8 hover:border-accent transition-colors flex flex-col justify-between group">
-            <div>
-              <div className="w-16 h-16 bg-accent/10 text-accent rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <Zap size={32} />
-              </div>
-              <h3 className="text-2xl font-bold font-display mb-2">I'm a Player</h3>
-              <p className="text-text-secondary mb-8">Find matches, track your game, join tournaments, and connect with the community.</p>
+          <Button onClick={handleGoogleSignIn} className="w-full justify-center shadow-lg shadow-accent/20 mb-8">
+            Continue with Google
+          </Button>
+
+          <div className="relative mb-8">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border/50"></div>
             </div>
-            <Button onClick={handleGoogleSignIn} className="w-full justify-center shadow-lg shadow-accent/20" icon={ChevronRight} iconPosition="right">
-              Continue with Google
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-bg-card text-text-secondary">New to PadelPro?</span>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-4">
+            <Button onClick={() => navigate('/register')} variant="outline" className="w-full justify-center">
+              Create Player Account
             </Button>
-          </Card>
-
-          {/* Club Owner Path */}
-          <Card className="p-8 hover:border-accent-blue transition-colors flex flex-col justify-between group border-dashed border-2">
-            <div>
-              <div className="w-16 h-16 bg-accent-blue/10 text-accent-blue rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <Building2 size={32} />
-              </div>
-              <h3 className="text-2xl font-bold font-display mb-2">I Own a Club</h3>
-              <p className="text-text-secondary mb-8">List your courts, manage bookings, grow your business, and reach new players.</p>
-            </div>
-            <Button onClick={() => navigate('/register/club')} variant="outline" className="w-full border-accent-blue text-accent-blue hover:bg-accent-blue/10" icon={ChevronRight} iconPosition="right">
+            <Button onClick={() => navigate('/register/club')} variant="outline" className="w-full justify-center border-accent-blue text-accent-blue hover:bg-accent-blue/10">
               Register Your Club
             </Button>
-          </Card>
-        </div>
+          </div>
+        </Card>
       </div>
     </PageWrapper>
   );

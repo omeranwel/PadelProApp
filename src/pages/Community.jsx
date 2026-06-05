@@ -15,6 +15,7 @@ import Modal from '../components/ui/Modal';
 import { communityService } from '../services/communityService';
 import { useAuthStore } from '../store/authStore';
 import { useAppStore } from '../store/appStore';
+import { api } from '../services/api';
 import toast from 'react-hot-toast';
 
 const Community = () => {
@@ -23,7 +24,7 @@ const Community = () => {
   
   const [activeTab, setActiveTab] = useState('Feed');
   const [activeForumTopic, setActiveForumTopic] = useState(null);
-  const tabs = ['Feed', 'Forums', 'Blogs', 'Newsletter'];
+  const tabs = ['Feed', 'Players', 'Forums', 'Blogs', 'Newsletter'];
   
   const [posts, setPosts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,6 +47,14 @@ const Community = () => {
 
   useEffect(() => {
     setIsLoading(true);
+    if (activeTab === 'Players') {
+      api.get('/players').then(res => {
+        setPosts(res || []);
+        setIsLoading(false);
+      }).catch(() => setIsLoading(false));
+      return;
+    }
+
     let mapped = activeTab.toLowerCase();
     if (mapped === 'forums') mapped = 'forum';
     if (mapped === 'blogs') mapped = 'blog';
@@ -150,6 +159,15 @@ const Community = () => {
     setNewsletterEmail('');
   };
 
+  const handleAddFriend = async (playerId) => {
+    if (!user) { openAuthModal(); return; }
+    try {
+      await api.post('/friends/request', { targetUserId: playerId });
+      toast.success('Friend request sent!');
+      setPosts(posts.map(p => p.id === playerId ? { ...p, friendStatus: 'request_sent' } : p));
+    } catch (err) { toast.error(err.message || 'Failed to send request'); }
+  };
+
   const blogPosts = [
     { title: 'Padel vs Tennis: Which is better for you?', date: 'Apr 12', author: 'Coach Ali' },
     { title: 'The Padel Pro Guide to Bandejas', date: 'Apr 10', author: 'Fatima K.' },
@@ -180,6 +198,7 @@ const Community = () => {
                   )}
                   <span className="relative z-10 flex items-center gap-2">
                     {tab === 'Feed' && <TrendingUp size={16} />}
+                    {tab === 'Players' && <Award size={16} />}
                     {tab === 'Forums' && <MessageSquare size={16} />}
                     {tab === 'Blogs' && <Newspaper size={16} />}
                     {tab === 'Newsletter' && <Mail size={16} />}
@@ -259,6 +278,47 @@ const Community = () => {
                     )}
                   </div>
                 </>
+              )}
+
+              {activeTab === 'Players' && (
+                <div className="space-y-6">
+                  {isLoading ? (
+                    <p className="text-center text-text-muted animate-pulse">Loading players...</p>
+                  ) : posts.length === 0 ? (
+                    <div className="py-12 border border-dashed border-border rounded-xl text-center text-text-muted">
+                      <p>No players found in your area.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {posts.map(p => (
+                        <Card key={p.id} className="p-6 space-y-4">
+                          <div className="flex items-center gap-4">
+                            <Avatar name={p.name} src={p.avatarUrl} size="lg" />
+                            <div>
+                              <h4 className="font-bold text-lg">{p.name}</h4>
+                              <p className="text-sm text-text-secondary">{p.skillLevel} · {p.city}</p>
+                            </div>
+                          </div>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-text-muted">Win Rate: {p.winRate || 0}%</span>
+                            <span className="text-text-muted">Matches: {p.matchesPlayed || 0}</span>
+                          </div>
+                          <div className="pt-2 border-t border-border flex justify-between items-center">
+                            {p.friendStatus === 'friends' ? (
+                              <Badge variant="blue" className="w-full justify-center bg-accent-blue/10 text-accent-blue">Friends</Badge>
+                            ) : p.friendStatus === 'request_sent' ? (
+                              <Badge className="w-full justify-center bg-bg-elevated text-text-muted">Request Sent</Badge>
+                            ) : p.friendStatus === 'request_received' ? (
+                              <Badge variant="orange" className="w-full justify-center bg-warning/10 text-warning">Pending Request</Badge>
+                            ) : (
+                              <Button size="sm" variant="outline" className="w-full justify-center" onClick={() => handleAddFriend(p.id)}>Add Friend</Button>
+                            )}
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
 
               {activeTab === 'Forums' && !activeForumTopic && (

@@ -38,6 +38,7 @@ import tournamentRoutes from "./modules/tournaments/tournaments.routes.js";
 import adminRoutes from "./modules/admin/admin.routes.js";
 import clubRoutes from "./modules/clubs/clubs.routes.js";
 import reviewRoutes from "./modules/reviews/reviews.routes.js";
+import friendRoutes from "./modules/friends/friends.routes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
@@ -129,6 +130,8 @@ app.use("/api/clubs", clubRoutes);
 app.use("/clubs", clubRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/reviews", reviewRoutes);
+app.use("/api/friends", friendRoutes);
+app.use("/friends", friendRoutes);
 
 app.get('/api/debug/routes', (req, res) => {
   const routes = app._router.stack

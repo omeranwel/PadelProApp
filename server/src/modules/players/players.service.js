@@ -20,13 +20,34 @@ export const getPlayers = async (requestingUserId, filters = {}) => {
   const where = { role: 'PLAYER', id: { not: requestingUserId }, matchmakingEnabled: true };
   if (skillLevel) where.skillLevel = { in: skillLevel.split(',') };
 
-  const [players, requestingUser] = await Promise.all([
+  const [players, requestingUser, friendships, sentRequests, receivedRequests] = await Promise.all([
     prisma.user.findMany({ where, select: safePlayerSelect }),
     prisma.user.findUnique({ where: { id: requestingUserId }, select: safePlayerSelect }),
+    prisma.friendship.findMany({
+      where: { OR: [{ userId: requestingUserId }, { friendId: requestingUserId }] },
+    }),
+    prisma.friendRequest.findMany({
+      where: { senderId: requestingUserId, status: 'PENDING' },
+    }),
+    prisma.friendRequest.findMany({
+      where: { receiverId: requestingUserId, status: 'PENDING' },
+    }),
   ]);
+
   if (!requestingUser) return [];
 
+  const friendIds = new Set(
+    friendships.map(f => (f.userId === requestingUserId ? f.friendId : f.userId))
+  );
+  const sentRequestIds = new Set(sentRequests.map(r => r.receiverId));
+  const receivedRequestIds = new Set(receivedRequests.map(r => r.senderId));
+
   const result = players.map((p) => {
+    let friendStatus = 'none';
+    if (friendIds.has(p.id)) friendStatus = 'friends';
+    else if (sentRequestIds.has(p.id)) friendStatus = 'request_sent';
+    else if (receivedRequestIds.has(p.id)) friendStatus = 'request_received';
+
     const compatibilityScore = calculateMatchScore(requestingUser, p);
     const breakdown = getCompatibilityBreakdown(requestingUser, p);
     let distanceKm = null;
@@ -46,12 +67,13 @@ export const getPlayers = async (requestingUserId, filters = {}) => {
       totalWins: p.totalWins, totalLosses: p.totalLosses, winRate: p.winRate,
       recentForm: p.recentForm, currentStreak: p.currentStreak, isVerified: p.isVerified,
       lastActive: p.lastActive ? formatDistanceToNow(new Date(p.lastActive),{addSuffix:true}) : 'recently',
-      distanceKm, compatibilityScore, breakdown,
+      distanceKm, compatibilityScore, breakdown, friendStatus,
       matchesPlayed: (p.totalWins||0)+(p.totalLosses||0),
     };
   })
   .filter(p => !maxDistance || p.distanceKm===null || p.distanceKm<=parseFloat(maxDistance))
   .sort((a,b) => b.compatibilityScore - a.compatibilityScore);
+  
   return result;
 };
 

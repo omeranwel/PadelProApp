@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, Users, MapPin, Building2, Calendar, 
   BarChart3, Shield, CheckCircle, XCircle, AlertCircle,
-  TrendingUp, DollarSign, Activity, Search, Eye, Trash2,
-  ChevronDown, RefreshCw, Award
+  Search, RefreshCw, Edit, Trash2, Ban, Mail
 } from 'lucide-react';
 import PageWrapper from '../components/layout/PageWrapper';
 import Card from '../components/ui/Card';
@@ -12,42 +11,57 @@ import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import Avatar from '../components/ui/Avatar';
 import Input from '../components/ui/Input';
+import Modal from '../components/ui/Modal';
 import { api } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 const StatCard = ({ icon: Icon, label, value, sub, color = 'text-accent' }) => (
-  <Card className="p-6">
+  <Card className="p-6 flex flex-col justify-between">
     <div className="flex items-start justify-between mb-4">
       <div className={`w-12 h-12 rounded-2xl bg-current/10 flex items-center justify-center ${color}`}>
         <Icon size={22} className={color} />
       </div>
     </div>
-    <p className="text-3xl font-bold font-display">{value}</p>
-    <p className="text-text-secondary text-sm mt-1">{label}</p>
-    {sub && <p className="text-xs text-text-muted mt-1">{sub}</p>}
+    <div>
+      <p className="text-3xl font-bold font-display">{value}</p>
+      <p className="text-text-secondary text-sm mt-1">{label}</p>
+      {sub && <p className="text-xs text-text-muted mt-1">{sub}</p>}
+    </div>
   </Card>
 );
 
 const TABS = ['Overview', 'Users', 'Clubs', 'Courts', 'Bookings'];
 
-const AdminPanel = () => {
+export default function AdminPanel() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('Overview');
   const [stats, setStats] = useState(null);
-  const [users, setUsers] = useState([]);
+  
+  // Data states
+  const [users, setUsers] = useState({ data: [], total: 0, page: 1, pages: 1 });
   const [clubs, setClubs] = useState([]);
   const [courts, setCourts] = useState([]);
-  const [bookings, setBookings] = useState([]);
+  const [bookings, setBookings] = useState({ data: [], total: 0, page: 1, pages: 1 });
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  
+  // Filters
+  const [userSearch, setUserSearch] = useState('');
+  const [userRole, setUserRole] = useState('');
+  const [userBanned, setUserBanned] = useState('');
+
+  // Modals
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
 
   useEffect(() => {
     if (user?.role !== 'APP_ADMIN') { navigate('/'); return; }
     loadDashboard();
-  }, []);
+  }, [user, navigate]);
 
   useEffect(() => {
     if (activeTab === 'Users') loadUsers();
@@ -64,56 +78,72 @@ const AdminPanel = () => {
     finally { setLoading(false); }
   };
 
-  const loadUsers = async () => {
+  const loadUsers = async (page = 1) => {
     try {
-      const data = await api.get(`/admin/users?search=${search}`);
-      setUsers(data.users || []);
-    } catch {}
+      const params = new URLSearchParams({ page, limit: 20, search: userSearch, role: userRole, banned: userBanned });
+      const data = await api.get(`/admin/users?${params.toString()}`);
+      setUsers({ data: data.users || [], total: data.total, page: data.page, pages: data.pages });
+    } catch { toast.error('Failed to load users'); }
   };
 
   const loadClubs = async () => {
     try {
-      const data = await api.get('/admin/clubs');
+      const data = await api.get('/admin/clubs?status=PENDING');
       setClubs(data.clubs || []);
-    } catch {}
+    } catch { toast.error('Failed to load clubs'); }
   };
 
   const loadCourts = async () => {
     try {
       const data = await api.get('/admin/courts');
       setCourts(data.courts || []);
-    } catch {}
+    } catch { toast.error('Failed to load courts'); }
   };
 
-  const loadBookings = async () => {
+  const loadBookings = async (page = 1) => {
     try {
-      const data = await api.get('/admin/bookings');
-      setBookings(data.bookings || []);
-    } catch {}
+      const data = await api.get(`/admin/bookings?page=${page}&limit=20`);
+      setBookings({ data: data.bookings || [], total: data.total, page: data.page, pages: data.pages });
+    } catch { toast.error('Failed to load bookings'); }
   };
 
-  const approveClub = async (id, approve) => {
+  // User Actions
+  const handleUserUpdate = async (id, data) => {
     try {
-      await api.patch(`/admin/clubs/${id}`, { isApproved: approve });
-      toast.success(approve ? 'Club approved!' : 'Club suspended');
+      await api.patch(`/admin/users/${id}`, data);
+      toast.success('User updated successfully');
+      loadUsers(users.page);
+      setIsUserModalOpen(false);
+    } catch (err) { toast.error(err.message || 'Failed to update user'); }
+  };
+
+  const handleDeleteUser = async (id) => {
+    if (!window.confirm('Are you sure you want to completely delete this user? This cannot be undone.')) return;
+    try {
+      await api.delete(`/admin/users/${id}`);
+      toast.success('User deleted');
+      loadUsers(users.page);
+    } catch (err) { toast.error(err.message); }
+  };
+
+  // Club Actions
+  const handleClubDecision = async (id, status, reason = '') => {
+    try {
+      await api.patch(`/admin/clubs/${id}`, { status, reason });
+      toast.success(`Club application ${status.toLowerCase()}`);
       loadClubs();
-    } catch { toast.error('Failed to update club'); }
+      loadDashboard();
+    } catch (err) { toast.error(err.message); }
   };
 
-  const toggleUser = async (id, isVerified) => {
+  // Booking Actions
+  const handleBookingUpdate = async (id, data) => {
     try {
-      await api.patch(`/admin/users/${id}`, { isVerified });
-      toast.success(isVerified ? 'User verified' : 'User unverified');
-      loadUsers();
-    } catch { toast.error('Failed to update user'); }
-  };
-
-  const toggleCourt = async (id, isActive) => {
-    try {
-      await api.patch(`/admin/courts/${id}`, { isActive });
-      toast.success(isActive ? 'Court activated' : 'Court deactivated');
-      loadCourts();
-    } catch { toast.error('Failed'); }
+      await api.patch(`/admin/bookings/${id}`, data);
+      toast.success('Booking updated');
+      loadBookings(bookings.page);
+      setIsBookingModalOpen(false);
+    } catch (err) { toast.error(err.message); }
   };
 
   if (user?.role !== 'APP_ADMIN') return null;
@@ -121,6 +151,7 @@ const AdminPanel = () => {
   return (
     <PageWrapper>
       <div className="max-w-7xl mx-auto px-6 pb-24">
+        {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
           <div>
             <div className="flex items-center gap-3 mb-2">
@@ -129,12 +160,12 @@ const AdminPanel = () => {
               </Badge>
             </div>
             <h1 className="text-4xl font-bold font-display">Control Center</h1>
-            <p className="text-text-secondary mt-1">Manage PadelPro Pakistan</p>
+            <p className="text-text-secondary mt-1">Manage PadelPro Pakistan Platform</p>
           </div>
-          <Button variant="secondary" icon={RefreshCw} onClick={loadDashboard}>Refresh</Button>
+          <Button variant="secondary" icon={RefreshCw} onClick={loadDashboard}>Refresh Data</Button>
         </div>
 
-        {/* Tab Bar */}
+        {/* Navigation */}
         <div className="flex bg-bg-elevated p-1 rounded-2xl border border-border w-fit mb-10 overflow-x-auto">
           {TABS.map(t => (
             <button key={t} onClick={() => setActiveTab(t)}
@@ -145,242 +176,184 @@ const AdminPanel = () => {
           ))}
         </div>
 
-        {/* Overview */}
-        {activeTab === 'Overview' && (
-          <div className="space-y-10">
-            {loading ? (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                {[1,2,3,4].map(i => <div key={i} className="h-36 bg-bg-card rounded-xl animate-pulse border border-border" />)}
-              </div>
-            ) : stats ? (
-              <>
+        {/* Tab Content */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+          >
+            {activeTab === 'Overview' && stats && (
+              <div className="space-y-8">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                  <StatCard icon={Users} label="Total Players" value={stats.totalUsers?.toLocaleString()} color="text-accent" />
-                  <StatCard icon={MapPin} label="Active Courts" value={stats.totalCourts} color="text-accent-blue" />
-                  <StatCard icon={Calendar} label="Total Bookings" value={stats.totalBookings?.toLocaleString()} color="text-accent-orange" />
-                  <StatCard icon={Activity} label="Total Matches" value={stats.totalMatches?.toLocaleString()} color="text-success" />
+                  <StatCard icon={Users} label="Total Players" value={stats.totalUsers?.toLocaleString()} sub={`${stats.newThisWeek} new this week`} color="text-accent" />
+                  <StatCard icon={Calendar} label="Total Bookings" value={stats.totalBookings?.toLocaleString()} sub={`${stats.bookingsToday} today`} color="text-accent-blue" />
+                  <StatCard icon={BarChart3} label="Total Revenue" value={`Rs ${(stats.totalRevenue/1000).toFixed(0)}k`} sub={`Rs ${stats.revenueToday} today`} color="text-success" />
+                  <StatCard icon={Building2} label="Pending Clubs" value={stats.pendingClubApps} color="text-warning" />
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                  <StatCard icon={Building2} label="Pending Clubs" value={stats.pendingClubs} color="text-warning" />
-                  <StatCard icon={Activity} label="Community Posts" value={stats.totalPosts} color="text-text-secondary" />
+              </div>
+            )}
+
+            {activeTab === 'Users' && (
+              <div className="space-y-6">
+                <div className="flex flex-col md:flex-row gap-4 bg-bg-card p-4 rounded-xl border border-border">
+                  <div className="flex-1">
+                    <Input placeholder="Search name, email, or phone..." icon={Search} value={userSearch} onChange={e => setUserSearch(e.target.value)} />
+                  </div>
+                  <select className="bg-bg-elevated border border-border rounded-xl px-4 text-text-primary focus:border-accent outline-none" value={userRole} onChange={e => setUserRole(e.target.value)}>
+                    <option value="">All Roles</option>
+                    <option value="PLAYER">Players</option>
+                    <option value="CLUB_OWNER">Club Owners</option>
+                    <option value="APP_ADMIN">Admins</option>
+                  </select>
+                  <select className="bg-bg-elevated border border-border rounded-xl px-4 text-text-primary focus:border-accent outline-none" value={userBanned} onChange={e => setUserBanned(e.target.value)}>
+                    <option value="">Status: All</option>
+                    <option value="false">Active</option>
+                    <option value="true">Banned</option>
+                  </select>
+                  <Button onClick={() => loadUsers(1)}>Filter</Button>
                 </div>
 
-                <div>
-                  <h3 className="text-xl font-bold font-display mb-6">Recent Registrations</h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="text-xs text-text-muted uppercase tracking-widest border-b border-border">
-                          <th className="text-left py-3 pr-6">Player</th>
-                          <th className="text-left py-3 pr-6">Role</th>
-                          <th className="text-left py-3 pr-6">City</th>
-                          <th className="text-left py-3">Verified</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {users.slice(0,8).map(u => (
-                          <tr key={u.id} className="border-b border-border/50 hover:bg-bg-elevated transition-colors">
-                            <td className="py-4 pr-6">
-                              <div className="flex items-center gap-3">
-                                <Avatar name={u.name} size="sm" />
-                                <div>
-                                  <p className="font-bold text-sm">{u.name}</p>
-                                  <p className="text-xs text-text-muted">{u.email}</p>
-                                </div>
+                <div className="overflow-x-auto bg-bg-card border border-border rounded-xl">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="text-xs text-text-muted uppercase tracking-widest border-b border-border bg-bg-elevated/50">
+                        <th className="py-4 pl-6 pr-4 font-semibold">User</th>
+                        <th className="py-4 pr-4 font-semibold">Role</th>
+                        <th className="py-4 pr-4 font-semibold">Location</th>
+                        <th className="py-4 pr-4 font-semibold">Stats</th>
+                        <th className="py-4 pr-4 font-semibold">Status</th>
+                        <th className="py-4 pr-6 text-right font-semibold">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.data.map(u => (
+                        <tr key={u.id} className="border-b border-border/50 hover:bg-bg-elevated/30 transition-colors">
+                          <td className="py-4 pl-6 pr-4">
+                            <div className="flex items-center gap-3">
+                              <Avatar name={u.name} url={u.avatarUrl} size="sm" />
+                              <div>
+                                <p className="font-bold text-sm text-text-primary">{u.name}</p>
+                                <p className="text-xs text-text-muted font-mono">{u.email}</p>
                               </div>
-                            </td>
-                            <td className="py-4 pr-6"><Badge variant={u.role === 'APP_ADMIN' ? 'orange' : u.role === 'CLUB_ADMIN' ? 'blue' : 'default'} className="text-[10px]">{u.role}</Badge></td>
-                            <td className="py-4 pr-6 text-sm text-text-secondary">{u.city}</td>
-                            <td className="py-4">
-                              {u.isVerified ? <CheckCircle size={16} className="text-success" /> : <AlertCircle size={16} className="text-warning" />}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                            </div>
+                          </td>
+                          <td className="py-4 pr-4">
+                            <Badge variant={u.role === 'APP_ADMIN' ? 'orange' : u.role === 'CLUB_OWNER' ? 'blue' : 'default'} className="text-[10px]">{u.role}</Badge>
+                          </td>
+                          <td className="py-4 pr-4 text-sm text-text-secondary">{u.city || '-'}</td>
+                          <td className="py-4 pr-4">
+                            <div className="flex flex-col gap-1 text-xs text-text-muted">
+                              <span>M: {u._count?.matches || 0}</span>
+                              <span>B: {u._count?.bookings || 0}</span>
+                            </div>
+                          </td>
+                          <td className="py-4 pr-4">
+                            {u.banned ? <Badge variant="danger" className="text-[10px] bg-danger/10 text-danger">Banned</Badge> 
+                              : u.emailVerified ? <Badge variant="default" className="text-[10px] bg-success/10 text-success">Verified</Badge>
+                              : <Badge variant="default" className="text-[10px] bg-warning/10 text-warning">Unverified</Badge>}
+                          </td>
+                          <td className="py-4 pr-6 text-right">
+                            <Button size="sm" variant="secondary" icon={Edit} onClick={() => { setSelectedUser(u); setIsUserModalOpen(true); }}>Edit</Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {users.data.length === 0 && <div className="text-center py-12 text-text-muted">No users found matching filters.</div>}
                 </div>
-              </>
-            ) : null}
-          </div>
-        )}
-
-        {/* Users */}
-        {activeTab === 'Users' && (
-          <div className="space-y-6">
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <Input placeholder="Search users by name or email..." icon={Search} value={search} onChange={e => setSearch(e.target.value)} />
               </div>
-              <Button onClick={loadUsers}>Search</Button>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="text-xs text-text-muted uppercase tracking-widest border-b border-border">
-                    <th className="text-left py-3 pr-4">User</th>
-                    <th className="text-left py-3 pr-4">Role</th>
-                    <th className="text-left py-3 pr-4">Skill</th>
-                    <th className="text-left py-3 pr-4">City</th>
-                    <th className="text-left py-3 pr-4">Verified</th>
-                    <th className="text-left py-3">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map(u => (
-                    <tr key={u.id} className="border-b border-border/50 hover:bg-bg-elevated transition-colors">
-                      <td className="py-4 pr-4">
-                        <div className="flex items-center gap-3">
-                          <Avatar name={u.name} size="sm" />
-                          <div>
-                            <p className="font-bold text-sm">{u.name}</p>
-                            <p className="text-xs text-text-muted">{u.email}</p>
-                          </div>
+            )}
+
+            {activeTab === 'Clubs' && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {clubs.map(club => (
+                    <Card key={club.id} className="p-6">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h4 className="font-bold text-xl">{club.clubName}</h4>
+                          <p className="text-text-secondary text-sm">{club.city} · {club.numberOfCourts} Courts</p>
                         </div>
-                      </td>
-                      <td className="py-4 pr-4"><Badge variant={u.role === 'CLUB_ADMIN' ? 'blue' : 'default'} className="text-[10px]">{u.role}</Badge></td>
-                      <td className="py-4 pr-4 text-xs text-text-secondary">{u.skillLevel}</td>
-                      <td className="py-4 pr-4 text-sm text-text-secondary">{u.city}</td>
-                      <td className="py-4 pr-4">
-                        {u.isVerified ? <span className="text-success flex items-center gap-1 text-xs"><CheckCircle size={14} /> Verified</span>
-                          : <span className="text-warning flex items-center gap-1 text-xs"><AlertCircle size={14} /> Unverified</span>}
-                      </td>
-                      <td className="py-4">
-                        <div className="flex gap-2">
-                          <button onClick={() => toggleUser(u.id, !u.isVerified)}
-                            className="text-xs px-3 py-1.5 rounded-lg border border-border hover:bg-bg-elevated transition-colors font-medium">
-                            {u.isVerified ? 'Unverify' : 'Verify'}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                        <Badge variant="orange" className="bg-warning/10 text-warning">Pending Review</Badge>
+                      </div>
+                      <div className="space-y-2 mb-6 bg-bg-elevated p-4 rounded-xl border border-border text-sm">
+                        <p><span className="text-text-muted">Owner:</span> {club.owner?.name}</p>
+                        <p><span className="text-text-muted">Email:</span> {club.owner?.email}</p>
+                        <p><span className="text-text-muted">Phone:</span> {club.ownerPhone}</p>
+                        <p><span className="text-text-muted">Address:</span> {club.address}</p>
+                      </div>
+                      <div className="flex gap-3">
+                        <Button size="sm" onClick={() => handleClubDecision(club.id, 'APPROVED')} icon={CheckCircle} className="flex-1 bg-success hover:bg-success/90 text-white border-none">Approve & Create</Button>
+                        <Button size="sm" variant="danger" onClick={() => handleClubDecision(club.id, 'REJECTED', 'Did not meet criteria')} icon={XCircle} className="flex-1">Reject</Button>
+                      </div>
+                    </Card>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* Clubs */}
-        {activeTab === 'Clubs' && (
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h3 className="text-xl font-bold font-display">Club Applications</h3>
-              <div className="flex gap-2">
-                <button onClick={() => loadClubs()} className="text-xs px-3 py-1.5 rounded-lg border border-border hover:bg-bg-elevated transition-colors font-medium">All</button>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {clubs.map(club => (
-                <Card key={club.id} className="p-6 space-y-4">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="font-bold text-lg">{club.name}</h4>
-                      <p className="text-text-secondary text-sm">{club.area}, {club.city}</p>
-                      <p className="text-xs text-text-muted mt-1">Owner: {club.owner?.name} · {club.owner?.email}</p>
+                  {clubs.length === 0 && (
+                    <div className="col-span-2 text-center py-16 text-text-muted border-2 border-dashed border-border rounded-xl">
+                      <Building2 size={48} className="mx-auto mb-4 opacity-20" />
+                      <p className="text-lg">No pending club applications</p>
                     </div>
-                    <Badge variant={club.isApproved ? 'default' : 'orange'} className={club.isApproved ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'}>
-                      {club.isApproved ? 'Approved' : 'Pending'}
-                    </Badge>
-                  </div>
-                  {club.description && <p className="text-sm text-text-secondary">{club.description}</p>}
-                  <div className="flex gap-3 pt-2">
-                    {!club.isApproved ? (
-                      <Button size="sm" onClick={() => approveClub(club.id, true)} icon={CheckCircle} className="flex-1">Approve</Button>
-                    ) : (
-                      <Button size="sm" variant="danger" onClick={() => approveClub(club.id, false)} icon={XCircle} className="flex-1">Suspend</Button>
-                    )}
-                  </div>
-                </Card>
-              ))}
-              {clubs.length === 0 && (
-                <div className="col-span-2 text-center py-12 text-text-muted">
-                  <Building2 size={32} className="mx-auto mb-3 opacity-30" />
-                  <p>No club applications yet</p>
+                  )}
                 </div>
-              )}
-            </div>
-          </div>
-        )}
+              </div>
+            )}
+          </motion.div>
+        </AnimatePresence>
 
-        {/* Courts */}
-        {activeTab === 'Courts' && (
-          <div className="space-y-6">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="text-xs text-text-muted uppercase tracking-widest border-b border-border">
-                    <th className="text-left py-3 pr-4">Court</th>
-                    <th className="text-left py-3 pr-4">Club</th>
-                    <th className="text-left py-3 pr-4">Area</th>
-                    <th className="text-left py-3 pr-4">Price/hr</th>
-                    <th className="text-left py-3 pr-4">Bookings</th>
-                    <th className="text-left py-3">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {courts.map(c => (
-                    <tr key={c.id} className="border-b border-border/50 hover:bg-bg-elevated transition-colors">
-                      <td className="py-4 pr-4 font-bold text-sm">{c.name}</td>
-                      <td className="py-4 pr-4 text-sm text-text-secondary">{c.clubName}</td>
-                      <td className="py-4 pr-4 text-sm text-text-secondary">{c.area}</td>
-                      <td className="py-4 pr-4 text-sm">Rs {c.pricePerHour?.toLocaleString()}</td>
-                      <td className="py-4 pr-4 text-sm">{c._count?.bookings || 0}</td>
-                      <td className="py-4">
-                        <button onClick={() => toggleCourt(c.id, !c.isActive)}
-                          className={`text-xs px-3 py-1.5 rounded-lg border transition-colors font-medium ${c.isActive ? 'border-success/30 text-success hover:bg-success/10' : 'border-danger/30 text-danger hover:bg-danger/10'}`}>
-                          {c.isActive ? 'Active' : 'Inactive'}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {courts.length === 0 && <div className="text-center py-12 text-text-muted"><MapPin size={28} className="mx-auto mb-2 opacity-30" /><p>No courts loaded</p></div>}
+        {/* User Edit Modal */}
+        <Modal isOpen={isUserModalOpen} onClose={() => setIsUserModalOpen(false)} className="max-w-md">
+          {selectedUser && (
+            <div>
+              <h3 className="text-2xl font-bold font-display mb-6">Edit User</h3>
+              <div className="flex items-center gap-4 mb-6 p-4 bg-bg-elevated rounded-xl border border-border">
+                <Avatar name={selectedUser.name} url={selectedUser.avatarUrl} />
+                <div>
+                  <p className="font-bold">{selectedUser.name}</p>
+                  <p className="text-xs text-text-muted">{selectedUser.email}</p>
+                </div>
+              </div>
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-text-secondary">System Role</label>
+                  <select 
+                    className="w-full bg-bg-elevated border border-border rounded-xl p-3 text-text-primary focus:border-accent outline-none"
+                    value={selectedUser.role} 
+                    onChange={e => setSelectedUser({...selectedUser, role: e.target.value})}
+                  >
+                    <option value="PLAYER">Player</option>
+                    <option value="CLUB_OWNER">Club Owner</option>
+                    <option value="APP_ADMIN">Admin</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-text-secondary">Account Status</label>
+                  <select 
+                    className="w-full bg-bg-elevated border border-border rounded-xl p-3 text-text-primary focus:border-accent outline-none"
+                    value={selectedUser.banned ? 'true' : 'false'} 
+                    onChange={e => setSelectedUser({...selectedUser, banned: e.target.value === 'true'})}
+                  >
+                    <option value="false">Active (Normal)</option>
+                    <option value="true">Banned (Suspended)</option>
+                  </select>
+                </div>
+                <div className="pt-4 border-t border-border flex justify-between items-center gap-4">
+                  <button onClick={() => handleDeleteUser(selectedUser.id)} className="text-danger hover:text-danger/80 text-sm font-medium flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-danger/10 transition-colors">
+                    <Trash2 size={16} /> Delete User
+                  </button>
+                  <div className="flex gap-2">
+                    <Button variant="secondary" onClick={() => setIsUserModalOpen(false)}>Cancel</Button>
+                    <Button onClick={() => handleUserUpdate(selectedUser.id, { role: selectedUser.role, banned: selectedUser.banned })}>Save Changes</Button>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </Modal>
 
-        {/* Bookings */}
-        {activeTab === 'Bookings' && (
-          <div className="space-y-6">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="text-xs text-text-muted uppercase tracking-widest border-b border-border">
-                    <th className="text-left py-3 pr-4">Ref</th>
-                    <th className="text-left py-3 pr-4">Player</th>
-                    <th className="text-left py-3 pr-4">Court</th>
-                    <th className="text-left py-3 pr-4">Date</th>
-                    <th className="text-left py-3 pr-4">Amount</th>
-                    <th className="text-left py-3">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bookings.map(b => (
-                    <tr key={b.id} className="border-b border-border/50 hover:bg-bg-elevated transition-colors">
-                      <td className="py-4 pr-4 text-xs text-text-muted font-mono">{b.bookingRef?.slice(0,8)}</td>
-                      <td className="py-4 pr-4 text-sm font-medium">{b.player?.name}</td>
-                      <td className="py-4 pr-4 text-sm text-text-secondary">{b.court?.name}</td>
-                      <td className="py-4 pr-4 text-sm text-text-secondary">{b.date} {b.startTime}</td>
-                      <td className="py-4 pr-4 text-sm font-medium">Rs {b.totalAmount?.toLocaleString()}</td>
-                      <td className="py-4">
-                        <Badge variant={b.status === 'CONFIRMED' ? 'default' : b.status === 'COMPLETED' ? 'green' : 'orange'}
-                          className={`text-[10px] ${b.status === 'CONFIRMED' ? 'bg-accent/10 text-accent' : b.status === 'COMPLETED' ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'}`}>
-                          {b.status}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {bookings.length === 0 && <div className="text-center py-12 text-text-muted"><Calendar size={28} className="mx-auto mb-2 opacity-30" /><p>No bookings loaded</p></div>}
-            </div>
-          </div>
-        )}
       </div>
     </PageWrapper>
   );
-};
-
-export default AdminPanel;
+}
