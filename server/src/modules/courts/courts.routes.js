@@ -4,6 +4,7 @@ import { verifyToken, requireRole } from '../../middleware/auth.js';
 import { upload } from '../../middleware/upload.js';
 
 const router = Router();
+console.log('🏟️ Courts routes module loaded');
 
 router.get('/', ctrl.getCourts);
 router.get('/:id', ctrl.getCourtById);

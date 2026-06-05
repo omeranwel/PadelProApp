@@ -3,6 +3,7 @@ import * as ctrl from './notifications.controller.js';
 import { verifyToken } from '../../middleware/auth.js';
 
 const router = Router();
+console.log('🔔 Notifications routes module loaded');
 
 router.get('/', verifyToken, ctrl.getNotifications);
 router.patch('/read-all', verifyToken, ctrl.markAllRead);

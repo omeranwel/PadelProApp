@@ -1,10 +1,13 @@
 import * as service from './courts.service.js';
+import { logger } from '../../lib/logger.js';
 
 export const getCourts = async (req, res, next) => {
+  logger.info({ query: req.query }, 'Courts list request');
   try {
     const courts = await service.getCourts(req.query);
     res.json(courts);
   } catch (err) {
+    logger.error({ err: err.message, stack: err.stack, query: req.query }, 'Courts list failed');
     next(err);
   }
 };
@@ -20,6 +23,7 @@ export const getCourtById = async (req, res, next) => {
 };
 
 export const getAvailability = async (req, res, next) => {
+  logger.info({ courtId: req.params.id, date: req.query.date }, 'Court availability request');
   try {
     const { id } = req.params;
     const { date } = req.query;
@@ -28,6 +32,7 @@ export const getAvailability = async (req, res, next) => {
     const slots = await service.getAvailability(id, date);
     res.json(slots);
   } catch (err) {
+    logger.error({ err: err.message, stack: err.stack, courtId: req.params.id, date: req.query.date }, 'Court availability failed');
     next(err);
   }
 };
