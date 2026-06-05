@@ -1,11 +1,20 @@
 export async function uploadImage(file, folder = 'profiles') {
+  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+  
+  if (!cloudName) {
+    console.warn('Cloudinary not configured. Using mock upload.');
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        // Return a mock padel court image
+        resolve(`https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?auto=format&fit=crop&q=80&w=800`);
+      }, 1000);
+    });
+  }
+
   const formData = new FormData();
   formData.append('file', file);
   formData.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'padelpro_uploads');
   formData.append('folder', `padelpro/${folder}`);
-
-  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-  if (!cloudName) throw new Error('Cloudinary not configured');
 
   const res = await fetch(
     `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
