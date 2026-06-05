@@ -6,28 +6,35 @@ export const syncUser = async (req, res, next) => {
   try {
     const { uid, email, name, picture } = req.user; // From Firebase token
 
-    // Upsert — create if new, return existing if returning user
-    const user = await prisma.user.upsert({
-      where: { firebaseUid: uid },
-      update: { 
-        lastActive: new Date(),
-        // Update name/avatar if changed in Google account
-        ...(name && { name }),
-        ...(picture && { avatarUrl: picture }),
-      },
-      create: {
-        firebaseUid: uid,
-        email,
-        name: name || email.split('@')[0],
-        avatarUrl: picture || null,
-        role: 'PLAYER',
-        skillLevel: 'beginner',
-        skillRating: 3.0,
-        profileComplete: false,
-        isVerified: false,
-        city: 'Karachi', // default
-      },
-    });
+    // Find user by email first to prevent unique constraint violations
+    let user = await prisma.user.findUnique({ where: { email } });
+
+    if (user) {
+      user = await prisma.user.update({
+        where: { email },
+        update: { 
+          firebaseUid: uid,
+          lastActive: new Date(),
+          ...(name && { name }),
+          ...(picture && { avatarUrl: picture }),
+        },
+      });
+    } else {
+      user = await prisma.user.create({
+        data: {
+          firebaseUid: uid,
+          email,
+          name: name || (email ? email.split('@')[0] : 'User'),
+          avatarUrl: picture || null,
+          role: 'PLAYER',
+          skillLevel: 'beginner',
+          skillRating: 3.0,
+          profileComplete: false,
+          isVerified: false,
+          city: 'Karachi', // default
+        },
+      });
+    }
 
     res.json({ 
       user,
