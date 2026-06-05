@@ -6,6 +6,22 @@ import rateLimit from "express-rate-limit";
 import pinoHttp from "pino-http";
 import { logger } from "./lib/logger.js";
 
+const requiredEnvVars = [
+  "FIREBASE_SERVICE_ACCOUNT",
+  "DATABASE_URL",
+  "DIRECT_URL",
+  "CLOUDINARY_CLOUD_NAME",
+  "CLOUDINARY_API_KEY",
+  "CLOUDINARY_API_SECRET",
+  "RESEND_API_KEY",
+];
+const missingEnvVars = requiredEnvVars.filter((key) => !process.env[key]);
+if (missingEnvVars.length > 0) {
+  logger.warn({ missingEnvVars }, "Missing required server environment variables. API routes may fail.");
+} else {
+  logger.info("All required server environment variables are present.");
+}
+
 // Route imports
 import authRoutes from "./modules/auth/auth.routes.js";
 import courtRoutes from "./modules/courts/courts.routes.js";

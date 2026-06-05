@@ -2,14 +2,19 @@ import admin from 'firebase-admin';
 import prisma from '../config/db.js';
 
 // Initialize only once
-if (!admin.apps.length && process.env.FIREBASE_SERVICE_ACCOUNT) {
-  try {
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-  } catch (err) {
-    console.error('Failed to initialize Firebase Admin:', err);
+if (!admin.apps.length) {
+  if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+    console.error('Missing FIREBASE_SERVICE_ACCOUNT env var. Firebase Admin will not initialize.');
+  } else {
+    try {
+      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+      });
+      console.log('Firebase Admin initialized successfully.');
+    } catch (err) {
+      console.error('Failed to initialize Firebase Admin from FIREBASE_SERVICE_ACCOUNT:', err.message);
+    }
   }
 }
 

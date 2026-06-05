@@ -1,5 +1,5 @@
 export const errorHandler = (err, req, res, next) => {
-  console.error(err);
+  console.error('Unhandled error in request', { method: req.method, url: req.originalUrl, status: err.status || 500, message: err.message, stack: err.stack });
   
   const status = err.status || 500;
   const message = err.message || 'Internal server error';
