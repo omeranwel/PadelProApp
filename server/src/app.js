@@ -81,6 +81,7 @@ app.get("/api/health", (req, res) => res.json({ status: "ok", timestamp: new Dat
 app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/register", authLimiter);
 app.use("/api/auth", authRoutes);
+logger.info("Mounted auth router at /api/auth");
 app.use("/api/courts", courtRoutes);
 app.use("/api/bookings", bookingRoutes);
 logger.info("Mounted bookings router at /api/bookings");
@@ -96,6 +97,11 @@ app.use("/api/tournaments", tournamentRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/clubs", clubRoutes);
 app.use("/api/reviews", reviewRoutes);
+
+app.use("/api/*", (req, res) => {
+  logger.warn({ method: req.method, url: req.originalUrl }, "API route not found");
+  res.status(404).json({ error: "API route not found", path: req.originalUrl });
+});
 
 app.use(errorHandler);
 
