@@ -47,6 +47,11 @@ app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
+app.use((req, res, next) => {
+  logger.info({ method: req.method, url: req.originalUrl }, 'Incoming API request');
+  next();
+});
+
 if (process.env.NODE_ENV !== "production") {
   app.use(morgan("dev"));
 }
@@ -85,6 +90,7 @@ logger.info("Mounted auth router at /api/auth");
 app.use("/api/courts", courtRoutes);
 app.use("/api/bookings", bookingRoutes);
 logger.info("Mounted bookings router at /api/bookings");
+app.get('/api/bookings/test', (req, res) => res.json({ status: 'ok', message: 'bookings route reachable' }));
 app.use("/api/players", playerRoutes);
 app.use("/api/matchmaking", matchRoutes);
 app.use("/api/listings", marketRoutes);
