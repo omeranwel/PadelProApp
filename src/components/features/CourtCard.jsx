@@ -62,6 +62,7 @@ const CourtCard = ({ court }) => {
         </div>
 
         <div className="p-5 flex flex-col h-full">
+          <div className="mb-4">
             <h3 className="text-xl font-bold font-display group-hover:text-accent-blue transition-colors truncate">
               {court.name}
             </h3>
