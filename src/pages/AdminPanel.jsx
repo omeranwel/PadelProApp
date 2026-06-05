@@ -38,7 +38,7 @@ export default function AdminPanel() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('Overview');
-  const [stats, setStats] = useState(null);
+  const [dashboardData, setDashboardData] = useState(null);
   
   // Data states
   const [users, setUsers] = useState({ data: [], total: 0, page: 1, pages: 1 });
@@ -73,7 +73,7 @@ export default function AdminPanel() {
   const loadDashboard = async () => {
     try {
       const data = await api.get('/admin/overview');
-      setStats(data.stats);
+      setDashboardData(data);
     } catch { toast.error('Failed to load dashboard'); }
     finally { setLoading(false); }
   };
@@ -185,13 +185,51 @@ export default function AdminPanel() {
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
           >
-            {activeTab === 'Overview' && stats && (
+            {activeTab === 'Overview' && dashboardData && (
               <div className="space-y-8">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                  <StatCard icon={Users} label="Total Players" value={stats.totalUsers?.toLocaleString()} sub={`${stats.newThisWeek} new this week`} color="text-accent" />
-                  <StatCard icon={Calendar} label="Total Bookings" value={stats.totalBookings?.toLocaleString()} sub={`${stats.bookingsToday} today`} color="text-accent-blue" />
-                  <StatCard icon={BarChart3} label="Total Revenue" value={`Rs ${(stats.totalRevenue/1000).toFixed(0)}k`} sub={`Rs ${stats.revenueToday} today`} color="text-success" />
-                  <StatCard icon={Building2} label="Pending Clubs" value={stats.pendingClubApps} color="text-warning" />
+                  <StatCard icon={Users} label="Total Players" value={dashboardData.stats.totalUsers?.toLocaleString()} sub={`${dashboardData.stats.newThisWeek} new this week`} color="text-accent" />
+                  <StatCard icon={Calendar} label="Total Bookings" value={dashboardData.stats.totalBookings?.toLocaleString()} sub={`${dashboardData.stats.bookingsToday} today`} color="text-accent-blue" />
+                  <StatCard icon={BarChart3} label="Total Revenue" value={`Rs ${(dashboardData.stats.totalRevenue/1000).toFixed(0)}k`} sub={`Rs ${dashboardData.stats.revenueToday} today`} color="text-success" />
+                  <StatCard icon={Building2} label="Pending Clubs" value={dashboardData.stats.pendingClubApps} color="text-warning" />
+                </div>
+                
+                {/* Charts Area */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Card className="p-6">
+                    <h3 className="text-xl font-bold font-display mb-4">New Users (Last 30 Days)</h3>
+                    <div className="flex gap-2 items-end h-48">
+                      {Object.entries(dashboardData.charts?.usersByDay || {}).slice(-15).map(([date, count], i, arr) => {
+                        const max = Math.max(...arr.map(x => x[1]), 1);
+                        return (
+                          <div key={date} className="flex-1 flex flex-col items-center gap-2 group">
+                            <div className="w-full bg-accent/20 rounded-t-sm relative group-hover:bg-accent transition-colors" style={{ height: `${(count/max)*100}%` }}>
+                               <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-bg-elevated px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">{count}</div>
+                            </div>
+                            <span className="text-[10px] text-text-muted rotate-45 origin-left truncate w-full">{date.slice(5)}</span>
+                          </div>
+                        );
+                      })}
+                      {Object.keys(dashboardData.charts?.usersByDay || {}).length === 0 && <div className="w-full h-full flex items-center justify-center text-text-muted">No data available</div>}
+                    </div>
+                  </Card>
+                  <Card className="p-6">
+                    <h3 className="text-xl font-bold font-display mb-4">Bookings (Last 30 Days)</h3>
+                    <div className="flex gap-2 items-end h-48">
+                      {Object.entries(dashboardData.charts?.bookingsByDay || {}).slice(-15).map(([date, count], i, arr) => {
+                        const max = Math.max(...arr.map(x => x[1]), 1);
+                        return (
+                          <div key={date} className="flex-1 flex flex-col items-center gap-2 group">
+                            <div className="w-full bg-accent-blue/20 rounded-t-sm relative group-hover:bg-accent-blue transition-colors" style={{ height: `${(count/max)*100}%` }}>
+                               <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-bg-elevated px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">{count}</div>
+                            </div>
+                            <span className="text-[10px] text-text-muted rotate-45 origin-left truncate w-full">{date.slice(5)}</span>
+                          </div>
+                        );
+                      })}
+                      {Object.keys(dashboardData.charts?.bookingsByDay || {}).length === 0 && <div className="w-full h-full flex items-center justify-center text-text-muted">No data available</div>}
+                    </div>
+                  </Card>
                 </div>
               </div>
             )}
@@ -300,6 +338,84 @@ export default function AdminPanel() {
                 </div>
               </div>
             )}
+
+            {activeTab === 'Courts' && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {courts.map(court => (
+                    <Card key={court.id} className="p-6">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h4 className="font-bold text-xl">{court.name}</h4>
+                          <p className="text-text-secondary text-sm">{court.clubName} · {court.city}</p>
+                        </div>
+                        <Badge variant={court.isActive ? 'success' : 'default'} className="text-[10px]">
+                          {court.isActive ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </div>
+                      <div className="space-y-2 mb-6 bg-bg-elevated p-4 rounded-xl border border-border text-sm">
+                        <p><span className="text-text-muted">Surface:</span> {court.surface}</p>
+                        <p><span className="text-text-muted">Price/hr:</span> Rs {court.pricePerHour}</p>
+                        <p><span className="text-text-muted">Owner:</span> {court.owner?.name}</p>
+                      </div>
+                    </Card>
+                  ))}
+                  {courts.length === 0 && (
+                    <div className="col-span-3 text-center py-16 text-text-muted border-2 border-dashed border-border rounded-xl">
+                      <MapPin size={48} className="mx-auto mb-4 opacity-20" />
+                      <p className="text-lg">No courts available in the system</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'Bookings' && (
+              <div className="space-y-6">
+                <Card className="overflow-hidden border border-border">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="text-xs text-text-muted uppercase tracking-widest border-b border-border bg-bg-elevated/50">
+                        <th className="py-4 pl-6 pr-4 font-semibold">Booking ID</th>
+                        <th className="py-4 pr-4 font-semibold">Player</th>
+                        <th className="py-4 pr-4 font-semibold">Court & Time</th>
+                        <th className="py-4 pr-4 font-semibold">Status</th>
+                        <th className="py-4 pr-6 text-right font-semibold">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {bookings.data.map(b => (
+                        <tr key={b.id} className="border-b border-border/50 hover:bg-bg-elevated/30 transition-colors">
+                          <td className="py-4 pl-6 pr-4 text-xs font-mono text-text-muted">{b.id.slice(0, 8)}</td>
+                          <td className="py-4 pr-4">
+                            <div className="flex items-center gap-3">
+                              <Avatar name={b.player.name} size="sm" />
+                              <div>
+                                <p className="font-bold text-sm text-text-primary">{b.player.name}</p>
+                                <p className="text-xs text-text-muted">{b.player.phone || b.player.email}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-4 pr-4">
+                            <p className="font-medium text-sm">{b.court.clubName} - {b.court.name}</p>
+                            <p className="text-xs text-text-secondary">{b.date} • {b.startTime}</p>
+                          </td>
+                          <td className="py-4 pr-4">
+                            <Badge className={`text-[10px] ${b.status === 'CONFIRMED' ? 'bg-accent/10 text-accent' : b.status === 'COMPLETED' ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'}`}>
+                              {b.status}
+                            </Badge>
+                          </td>
+                          <td className="py-4 pr-6 text-right">
+                            <Button size="sm" variant="secondary" icon={Edit} onClick={() => { setSelectedBooking(b); setIsBookingModalOpen(true); }}>Edit</Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {bookings.data.length === 0 && <div className="text-center py-12 text-text-muted">No bookings found in the system.</div>}
+                </Card>
+              </div>
+            )}
           </motion.div>
         </AnimatePresence>
 
@@ -347,6 +463,48 @@ export default function AdminPanel() {
                     <Button variant="secondary" onClick={() => setIsUserModalOpen(false)}>Cancel</Button>
                     <Button onClick={() => handleUserUpdate(selectedUser.id, { role: selectedUser.role, banned: selectedUser.banned })}>Save Changes</Button>
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </Modal>
+
+        {/* Booking Edit Modal */}
+        <Modal isOpen={isBookingModalOpen} onClose={() => setIsBookingModalOpen(false)} className="max-w-md">
+          {selectedBooking && (
+            <div>
+              <h3 className="text-2xl font-bold font-display mb-6">Manage Booking</h3>
+              <div className="space-y-4 mb-6 text-sm bg-bg-elevated p-4 rounded-xl border border-border">
+                <p><span className="text-text-muted">Booking ID:</span> <span className="font-mono">{selectedBooking.id}</span></p>
+                <p><span className="text-text-muted">Player:</span> {selectedBooking.player.name}</p>
+                <p><span className="text-text-muted">Court:</span> {selectedBooking.court.clubName} - {selectedBooking.court.name}</p>
+              </div>
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-text-secondary">Booking Status</label>
+                  <select 
+                    className="w-full bg-bg-elevated border border-border rounded-xl p-3 text-text-primary focus:border-accent outline-none"
+                    value={selectedBooking.status} 
+                    onChange={e => setSelectedBooking({...selectedBooking, status: e.target.value})}
+                  >
+                    <option value="CONFIRMED">Confirmed</option>
+                    <option value="COMPLETED">Completed</option>
+                    <option value="CANCELLED">Cancelled</option>
+                  </select>
+                </div>
+                {selectedBooking.status === 'CANCELLED' && (
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-text-secondary">Cancellation Reason (Optional)</label>
+                    <Input 
+                      placeholder="Reason for cancellation..."
+                      value={selectedBooking.cancelReason || ''}
+                      onChange={e => setSelectedBooking({...selectedBooking, cancelReason: e.target.value})}
+                    />
+                  </div>
+                )}
+                <div className="pt-4 border-t border-border flex justify-end gap-2">
+                  <Button variant="secondary" onClick={() => setIsBookingModalOpen(false)}>Close</Button>
+                  <Button onClick={() => handleBookingUpdate(selectedBooking.id, { status: selectedBooking.status, cancelReason: selectedBooking.cancelReason })}>Update Booking</Button>
                 </div>
               </div>
             </div>

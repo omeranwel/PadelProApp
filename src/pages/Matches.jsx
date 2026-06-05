@@ -37,22 +37,27 @@ const Matches = () => {
 
   React.useEffect(() => {
     if (isLoggedIn) {
-      playerService.getRequests('received').then(res => {
-        setReceivedRequests(res.data || res);
+      playerService.getRequests().then(res => {
+        const reqs = res.requests || [];
+        setReceivedRequests(reqs.map(r => ({
+          ...r.sender,
+          requestId: r.id
+        })));
       });
-      playerService.getRequests('sent').then(res => {
-        const data = res.data || res;
-        data.forEach(r => { if (!requests.find(x => x.id === r.id)) addRequest(r); });
+      // Also get friends for the Connected tab
+      api.get('/friends').then(res => {
+        setConnectedPlayers(res.friends || []);
       });
     }
   }, [isLoggedIn, requests, addRequest]);
 
   const handleAccept = async (requestId) => {
     try {
-      const res = await playerService.updateRequest(requestId, 'accepted');
-      const result = res.data || res;
+      await playerService.updateRequest(requestId, 'accepted');
       toast.success('Match accepted!');
-      if (result.conversationId) navigate(`/chat?conversation=${result.conversationId}`);
+      setReceivedRequests(prev => prev.filter(r => r.requestId !== requestId));
+      // Optionally reload connected players
+      api.get('/friends').then(res => setConnectedPlayers(res.friends || []));
     } catch(err) {
       toast.error('Failed to accept request.');
     }
@@ -259,11 +264,17 @@ const Matches = () => {
                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                    {receivedRequests.map((p) => (
                       <PlayerCard 
-                        key={p.id} 
+                        key={p.requestId} 
                         player={p} 
                         isRequest={true}
-                        onAccept={() => handleAccept(p.id)}
-                        onDecline={() => setReceivedRequests(prev => prev.filter(r => r.id !== p.id))}
+                        onAccept={() => handleAccept(p.requestId)}
+                        onDecline={async () => {
+                          try {
+                            await playerService.cancelRequest(p.requestId);
+                            setReceivedRequests(prev => prev.filter(r => r.requestId !== p.requestId));
+                            toast.success('Request declined');
+                          } catch (err) { toast.error('Failed to decline request'); }
+                        }}
                       />
                    ))}
                    {receivedRequests.length === 0 && (
