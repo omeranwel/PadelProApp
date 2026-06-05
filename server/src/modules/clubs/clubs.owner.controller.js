@@ -7,41 +7,49 @@ export const getClubOverviewFull = async (req, res) => {
     const dbUser = await getDbUser(req.user.uid);
     const club = await prisma.club.findUnique({
       where: { ownerId: dbUser.id },
+      include: { courts: true },
     });
     if (!club) return res.status(404).json({ message: 'Club not found. Your application may still be pending.' });
 
-    // Courts belong to owner via Court model
-    const courts = await prisma.court.findMany({ where: { ownerId: dbUser.id } });
+    const courts = club.courts || [];
     const courtIds = courts.map(c => c.id);
 
     const todayStart = new Date(); todayStart.setHours(0,0,0,0);
     const weekStart = new Date(Date.now() - 7*24*60*60*1000);
     const monthStart = new Date(Date.now() - 30*24*60*60*1000);
 
-    const [bookingsToday, bookingsThisWeek, bookingsTotal, revenueTotal, revenueThisMonth, uniquePlayers, upcomingBookings] = await Promise.all([
-      prisma.booking.count({ where: { courtId: { in: courtIds }, createdAt: { gte: todayStart } } }),
-      prisma.booking.count({ where: { courtId: { in: courtIds }, createdAt: { gte: weekStart } } }),
-      prisma.booking.count({ where: { courtId: { in: courtIds } } }),
-      prisma.booking.aggregate({ where: { courtId: { in: courtIds }, status: 'COMPLETED' }, _sum: { totalAmount: true } }),
-      prisma.booking.aggregate({ where: { courtId: { in: courtIds }, status: 'COMPLETED', createdAt: { gte: monthStart } }, _sum: { totalAmount: true } }),
-      prisma.booking.findMany({ where: { courtId: { in: courtIds } }, select: { playerId: true }, distinct: ['playerId'] }),
-      prisma.booking.findMany({
-        where: { courtId: { in: courtIds }, status: { not: 'CANCELLED' } },
-        take: 10,
-        orderBy: { createdAt: 'desc' },
-        include: {
-          player: { select: { name: true, phone: true, avatarUrl: true } },
-          court: { select: { name: true } },
-        },
-      }),
-    ]);
+    // Avoid DB errors when no courts exist yet
+    const bookingFilters = courtIds.length > 0
+      ? [
+          prisma.booking.count({ where: { courtId: { in: courtIds }, createdAt: { gte: todayStart } } }),
+          prisma.booking.count({ where: { courtId: { in: courtIds }, createdAt: { gte: weekStart } } }),
+          prisma.booking.count({ where: { courtId: { in: courtIds } } }),
+          prisma.booking.aggregate({ where: { courtId: { in: courtIds }, status: 'COMPLETED' }, _sum: { totalAmount: true } }),
+          prisma.booking.aggregate({ where: { courtId: { in: courtIds }, status: 'COMPLETED', createdAt: { gte: monthStart } }, _sum: { totalAmount: true } }),
+          prisma.booking.findMany({ where: { courtId: { in: courtIds } }, select: { playerId: true }, distinct: ['playerId'] }),
+          prisma.booking.findMany({
+            where: { courtId: { in: courtIds }, status: { not: 'CANCELLED' } },
+            take: 10,
+            orderBy: { createdAt: 'desc' },
+            include: {
+              player: { select: { name: true, phone: true, avatarUrl: true } },
+              court: { select: { name: true } },
+            },
+          }),
+        ]
+      : [Promise.resolve(0), Promise.resolve(0), Promise.resolve(0),
+         Promise.resolve({ _sum: { totalAmount: 0 } }),
+         Promise.resolve({ _sum: { totalAmount: 0 } }),
+         Promise.resolve([]), Promise.resolve([])];
+
+    const [bookingsToday, bookingsThisWeek, bookingsTotal, revenueTotal, revenueThisMonth, uniquePlayers, upcomingBookings] = await Promise.all(bookingFilters);
 
     res.json({
       club: { ...club, courts },
       stats: {
         bookingsToday, bookingsThisWeek, bookingsTotal,
-        revenueTotal: revenueTotal._sum.totalAmount || 0,
-        revenueThisMonth: revenueThisMonth._sum.totalAmount || 0,
+        revenueTotal: revenueTotal._sum?.totalAmount || 0,
+        revenueThisMonth: revenueThisMonth._sum?.totalAmount || 0,
         uniquePlayersCount: uniquePlayers.length,
         courtsCount: courts.length,
       },

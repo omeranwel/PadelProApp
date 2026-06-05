@@ -122,6 +122,8 @@ model Court {
   isActive      Boolean   @default(true)
   ownerId       String
   owner         User      @relation("ClubOwner", fields: [ownerId], references: [id])
+  clubId        String?
+  club          Club?     @relation("ClubCourts", fields: [clubId], references: [id])
   images        CourtImage[]
   bookings      Booking[]
   reviews       Review[]
@@ -357,6 +359,7 @@ model Club {
   rating         Float    @default(0)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+  courts         Court[]  @relation("ClubCourts")
 
   @@map("clubs")
 }
@@ -506,7 +509,7 @@ model PostLike {
 
 model ClubApplication {
   id               String    @id @default(uuid())
-  ownerId          String    @unique
+  ownerId          String
   owner            User      @relation(fields: [ownerId], references: [id])
   
   clubName         String

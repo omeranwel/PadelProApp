@@ -49,14 +49,16 @@ export default function ClubDashboard() {
   }, [activeTab]);
 
   const loadDashboard = async () => {
+    setLoading(true);
     try {
       const data = await api.get('/clubs/overview');
       setDashboardData(data);
     } catch (err) {
-      if (err.response?.status === 404) {
-        toast.error('Club not found or pending approval.');
+      const msg = err.response?.data?.message || err.message || '';
+      if (err.response?.status === 404 || msg.includes('not found') || msg.includes('pending')) {
+        toast.error('Club not found yet — your application may still be processing.');
       } else {
-        toast.error('Failed to load club data');
+        toast.error(`Failed to load club data: ${msg}`);
       }
     } finally {
       setLoading(false);
@@ -138,8 +140,8 @@ export default function ClubDashboard() {
         <AnimatePresence mode="wait">
           <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
             
-            {/* Overview Tab */}
-            {activeTab === 'Overview' && dashboardData && (
+            {activeTab === 'Overview' && (
+              dashboardData ? (
               <div className="space-y-10">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                   <Card className="p-6">
@@ -171,7 +173,7 @@ export default function ClubDashboard() {
                       <Button size="sm" variant="outline" onClick={() => setActiveTab('Bookings')}>View All</Button>
                     </div>
                     <Card className="overflow-hidden border border-border">
-                      {dashboardData.upcomingBookings.length > 0 ? (
+                      {dashboardData.upcomingBookings && dashboardData.upcomingBookings.length > 0 ? (
                         <table className="w-full text-left border-collapse">
                           <thead>
                             <tr className="text-xs text-text-muted uppercase tracking-widest border-b border-border bg-bg-elevated/50">
@@ -191,7 +193,7 @@ export default function ClubDashboard() {
                           </tbody>
                         </table>
                       ) : (
-                        <div className="p-8 text-center text-text-muted">No upcoming bookings found.</div>
+                        <div className="p-8 text-center text-text-muted">No bookings yet. Share your courts to start receiving bookings!</div>
                       )}
                     </Card>
                   </div>
@@ -199,19 +201,33 @@ export default function ClubDashboard() {
                   <div className="space-y-6">
                     <h3 className="text-xl font-bold font-display">Court Management</h3>
                     <div className="space-y-4">
-                      {dashboardData.club.courts.map(c => (
-                        <Card key={c.id} className="p-5 flex justify-between items-center border border-border">
-                          <div>
-                            <p className="font-bold">{c.name}</p>
-                            <p className="text-xs text-text-secondary">{c.surface} · Rs {c.pricePerHour}/hr</p>
-                          </div>
-                          <Button size="sm" variant="secondary" icon={Clock} onClick={() => { setSelectedCourt(c); setIsSlotModalOpen(true); }}>Slots</Button>
+                      {(dashboardData.club.courts || []).length > 0 ? (
+                        dashboardData.club.courts.map(c => (
+                          <Card key={c.id} className="p-5 flex justify-between items-center border border-border">
+                            <div>
+                              <p className="font-bold">{c.name}</p>
+                              <p className="text-xs text-text-secondary">{c.surface} · Rs {c.pricePerHour}/hr</p>
+                            </div>
+                            <Button size="sm" variant="secondary" icon={Clock} onClick={() => { setSelectedCourt(c); setIsSlotModalOpen(true); }}>Slots</Button>
+                          </Card>
+                        ))
+                      ) : (
+                        <Card className="p-6 text-center border-dashed">
+                          <p className="text-text-muted text-sm">No courts registered yet.</p>
                         </Card>
-                      ))}
+                      )}
                     </div>
                   </div>
                 </div>
               </div>
+              ) : (
+              <Card className="p-12 text-center border-dashed">
+                <Building2 size={48} className="mx-auto mb-4 text-text-muted opacity-40" />
+                <h3 className="text-xl font-bold mb-2">Club Data Not Available</h3>
+                <p className="text-text-secondary text-sm mb-6">Your club registration may still be processing, or there was a connection issue.</p>
+                <Button onClick={loadDashboard} icon={RefreshCw}>Try Again</Button>
+              </Card>
+              )
             )}
 
             {/* Bookings Tab */}
