@@ -83,6 +83,7 @@ app.use("/api/auth/register", authLimiter);
 app.use("/api/auth", authRoutes);
 app.use("/api/courts", courtRoutes);
 app.use("/api/bookings", bookingRoutes);
+logger.info("Mounted bookings router at /api/bookings");
 app.use("/api/players", playerRoutes);
 app.use("/api/matchmaking", matchRoutes);
 app.use("/api/listings", marketRoutes);

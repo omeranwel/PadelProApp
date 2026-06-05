@@ -3,6 +3,7 @@ import * as ctrl from './bookings.controller.js';
 import { verifyToken } from '../../middleware/auth.js';
 
 const router = Router();
+console.log('📦 Bookings routes module loaded');
 
 router.post('/', verifyToken, ctrl.createBooking);
 router.get('/', verifyToken, ctrl.getUserBookings);
