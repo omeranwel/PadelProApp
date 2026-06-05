@@ -88,23 +88,41 @@ app.get("/api/health", (req, res) => res.json({ status: "ok", timestamp: new Dat
 app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/register", authLimiter);
 app.use("/api/auth", authRoutes);
-logger.info("Mounted auth router at /api/auth");
+app.use("/auth/login", authLimiter);
+app.use("/auth/register", authLimiter);
+app.use("/auth", authRoutes);
+logger.info("Mounted auth router at /api/auth and /auth");
 app.use("/api/courts", courtRoutes);
+app.use("/courts", courtRoutes);
 app.use("/api/bookings", bookingRoutes);
-logger.info("Mounted bookings router at /api/bookings");
+app.use("/bookings", bookingRoutes);
+logger.info("Mounted bookings router at /api/bookings and /bookings");
 app.get('/api/bookings/test', (req, res) => res.json({ status: 'ok', message: 'bookings route reachable' }));
+app.get('/bookings/test', (req, res) => res.json({ status: 'ok', message: 'bookings route reachable' }));
 app.use("/api/players", playerRoutes);
+app.use("/players", playerRoutes);
 app.use("/api/matchmaking", matchRoutes);
+app.use("/matchmaking", matchRoutes);
 app.use("/api/listings", marketRoutes);
+app.use("/listings", marketRoutes);
 app.use("/api/posts", communityRoutes);
+app.use("/posts", communityRoutes);
 app.use("/api/conversations", chatRoutes);
+app.use("/conversations", chatRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/notifications", notificationRoutes);
 app.use("/api/chatbot", chatbotRoutes);
+app.use("/chatbot", chatbotRoutes);
 app.use("/api/search", searchRoutes);
+app.use("/search", searchRoutes);
 app.use("/api/tournaments", tournamentRoutes);
+app.use("/tournaments", tournamentRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/admin", adminRoutes);
 app.use("/api/clubs", clubRoutes);
+app.use("/clubs", clubRoutes);
 app.use("/api/reviews", reviewRoutes);
+app.use("/reviews", reviewRoutes);
 
 app.get('/api/debug/routes', (req, res) => {
   const routes = app._router.stack
@@ -116,8 +134,22 @@ app.get('/api/debug/routes', (req, res) => {
   console.log('[API DEBUG] route list', routes);
   res.json({ status: 'ok', routes });
 });
+app.get('/debug/routes', (req, res) => {
+  const routes = app._router.stack
+    .filter((layer) => layer.route)
+    .map((layer) => ({
+      path: layer.route.path,
+      methods: Object.keys(layer.route.methods).map((m) => m.toUpperCase()),
+    }));
+  console.log('[API DEBUG] route list', routes);
+  res.json({ status: 'ok', routes });
+});
 
 app.get('/api/debug/health', (req, res) => {
+  console.log('[API DEBUG] health check');
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+app.get('/debug/health', (req, res) => {
   console.log('[API DEBUG] health check');
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
