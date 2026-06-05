@@ -24,7 +24,7 @@ const Navbar = () => {
   React.useEffect(() => {
     if (isLoggedIn) {
       notificationService.getAll().then(setNotifications).catch(() => {});
-      const token = localStorage.getItem('accessToken');
+      const token = useAuthStore.getState().token;
       if (token) {
         const socket = initSocket(token);
         const { addNotification, pushToast } = useAppStore.getState();

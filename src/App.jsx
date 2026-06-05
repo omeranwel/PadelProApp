@@ -1,5 +1,6 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { auth } from './lib/firebase';
 import { useAuthStore } from './store/authStore';
 import { useAppStore } from './store/appStore';
 import Navbar from './components/layout/Navbar';
@@ -46,10 +47,32 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
-const App = () => (
-  <Router>
-    <div className="min-h-screen bg-bg-base text-text-primary selection:bg-accent/20 selection:text-accent">
-      <Navbar />
+const App = () => {
+  const logout = useAuthStore((state) => state.logout);
+  const [authReady, setAuthReady] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (!user) {
+        await logout();
+      }
+      setAuthReady(true);
+    });
+    return typeof unsubscribe === 'function' ? unsubscribe : undefined;
+  }, [logout]);
+
+  if (!authReady) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-bg-base text-text-primary">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  return (
+    <Router>
+      <div className="min-h-screen bg-bg-base text-text-primary selection:bg-accent/20 selection:text-accent">
+        <Navbar />
       <Suspense fallback={<div className="h-screen flex items-center justify-center"><Spinner size="lg" /></div>}>
         <Routes>
           <Route path="/" element={<Home />} />
@@ -81,6 +104,7 @@ const App = () => (
       <NotificationToast />
     </div>
   </Router>
-);
+  );
+};
 
 export default App;

@@ -21,10 +21,10 @@ export async function apiCall(endpoint, options = {}) {
   });
 
   if (response.status === 401) {
-    // Token expired mid-session — sign user out and redirect to login
-    await auth.signOut();
-    window.location.href = '/';
-    return;
+    const error = await response.json().catch(() => ({ message: 'Unauthorized' }));
+    const err = new Error(error.error || error.message || `HTTP ${response.status}`);
+    err.response = { data: error };
+    throw err;
   }
 
   if (!response.ok) {
@@ -84,9 +84,10 @@ api.postMultipart = async (endpoint, formData) => {
     body: formData
   });
   if (response.status === 401) {
-    await auth.signOut();
-    window.location.href = '/';
-    return;
+    const error = await response.json().catch(() => ({ message: 'Unauthorized' }));
+    const err = new Error(error.error || error.message || `HTTP ${response.status}`);
+    err.response = { data: error };
+    throw err;
   }
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Unknown error' }));

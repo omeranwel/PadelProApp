@@ -24,7 +24,10 @@ if (isConfigured) {
   auth = {
     currentUser: null,
     signOut: async () => {},
-    onAuthStateChanged: () => () => {},
+    onAuthStateChanged: (callback) => {
+      callback(null);
+      return () => {};
+    },
   };
 }
 
