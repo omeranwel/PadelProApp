@@ -21,14 +21,23 @@ const CourtDetail = () => {
   const courtId = id;
   const [court, setCourt] = useState(null);
   const [courtLoading, setCourtLoading] = useState(true);
+
+  const isValidCourtId = (value) =>
+    typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
   
   useEffect(() => {
+    if (!isValidCourtId(courtId)) {
+      toast.error('Invalid court link');
+      navigate('/courts', { replace: true });
+      return;
+    }
+
     setCourtLoading(true);
     courtService.getCourtById(id)
       .then(res => setCourt(res.data || res))
       .catch(() => { toast.error('Court not found'); navigate('/courts'); })
       .finally(() => setCourtLoading(false));
-  }, [id]);
+  }, [courtId, navigate]);
 
   const today = new Date();
   const dates = Array.from({ length: 7 }, (_, i) => {

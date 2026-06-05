@@ -16,6 +16,9 @@ import { courtService } from '../services/courtService';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
+const isValidCourtId = (value) =>
+  typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+
 const Bookings = () => {
   const navigate = useNavigate();
   const [filter, setFilter] = useState('upcoming');
@@ -170,7 +173,21 @@ const Bookings = () => {
                           ) : (
                             <>
                                <Button variant="ghost" className="w-full justify-center lg:justify-start" icon={Download}>Receipt</Button>
-                               <Button variant="outline" className="w-full justify-center lg:justify-start" icon={Receipt} onClick={() => navigate(`/courts/${booking.courtId}`)}>Book Again</Button>
+                               <Button
+                                 variant="outline"
+                                 className="w-full justify-center lg:justify-start"
+                                 icon={Receipt}
+                                 onClick={() => {
+                                   if (!isValidCourtId(booking.courtId)) {
+                                     toast.error('This booking uses an old court reference. Please open the courts list instead.');
+                                     navigate('/courts');
+                                     return;
+                                   }
+                                   navigate(`/courts/${booking.courtId}`);
+                                 }}
+                               >
+                                 Book Again
+                               </Button>
                             </>
                           )}
                        </div>
