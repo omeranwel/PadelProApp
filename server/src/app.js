@@ -122,9 +122,12 @@ app.get('/api/debug/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.use("/api/*", (req, res) => {
-  logger.warn({ method: req.method, url: req.originalUrl }, "API route not found");
-  res.status(404).json({ error: "API route not found", path: req.originalUrl });
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/')) {
+    logger.warn({ method: req.method, url: req.originalUrl }, 'API route not found');
+    return res.status(404).json({ error: 'API route not found', path: req.originalUrl });
+  }
+  next();
 });
 
 app.use(errorHandler);
