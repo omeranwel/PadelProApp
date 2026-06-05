@@ -41,6 +41,7 @@ import reviewRoutes from "./modules/reviews/reviews.routes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
+console.log('🚀 Express app initialized');
 
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({ origin: true, credentials: true }));
@@ -48,6 +49,7 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 app.use((req, res, next) => {
+  console.log('[API] incoming request', req.method, req.originalUrl);
   logger.info({ method: req.method, url: req.originalUrl }, 'Incoming API request');
   next();
 });
@@ -103,6 +105,22 @@ app.use("/api/tournaments", tournamentRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/clubs", clubRoutes);
 app.use("/api/reviews", reviewRoutes);
+
+app.get('/api/debug/routes', (req, res) => {
+  const routes = app._router.stack
+    .filter((layer) => layer.route)
+    .map((layer) => ({
+      path: layer.route.path,
+      methods: Object.keys(layer.route.methods).map((m) => m.toUpperCase()),
+    }));
+  console.log('[API DEBUG] route list', routes);
+  res.json({ status: 'ok', routes });
+});
+
+app.get('/api/debug/health', (req, res) => {
+  console.log('[API DEBUG] health check');
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
 app.use("/api/*", (req, res) => {
   logger.warn({ method: req.method, url: req.originalUrl }, "API route not found");
