@@ -1,10 +1,13 @@
 import * as service from './bookings.service.js';
+import { logger } from '../../lib/logger.js';
 
 export const createBooking = async (req, res, next) => {
+  logger.info({ user: req.user?.uid, body: req.body }, 'Booking create request');
   try {
     const result = await service.createBooking(req.user.id, req.body);
     res.status(201).json(result);
   } catch (err) {
+    logger.error({ err: err.message, stack: err.stack, user: req.user?.uid, body: req.body }, 'Booking create failed');
     next(err);
   }
 };
