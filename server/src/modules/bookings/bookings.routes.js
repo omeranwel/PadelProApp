@@ -4,6 +4,10 @@ import { verifyToken } from '../../middleware/auth.js';
 
 const router = Router();
 console.log('📦 Bookings routes module loaded');
+router.use((req, res, next) => {
+  console.log('[BOOKINGS ROUTES] incoming', req.method, req.originalUrl, req.baseUrl, req.path);
+  next();
+});
 
 router.post('/', verifyToken, ctrl.createBooking);
 router.get('/', verifyToken, ctrl.getUserBookings);
