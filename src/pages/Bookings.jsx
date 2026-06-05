@@ -19,6 +19,30 @@ import toast from 'react-hot-toast';
 const isValidCourtId = (value) =>
   typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
+const normalizeStatus = (status) => {
+  const raw = String(status || '').toLowerCase();
+  if (raw === 'confirmed') return 'upcoming';
+  if (raw === 'completed') return 'past';
+  if (raw === 'cancelled' || raw === 'canceled') return 'cancelled';
+  return raw || 'upcoming';
+};
+
+const normalizeBooking = (booking = {}) => {
+  const priceValue = booking.price ?? booking.totalAmount ?? 0;
+  const parsedPrice = Number(priceValue);
+  return {
+    ...booking,
+    id: booking.id || booking.bookingId || `booking-${Math.random().toString(36).slice(2, 8)}`,
+    courtId: booking.courtId || booking.court?.id || null,
+    courtName: booking.courtName || booking.court?.name || 'Court',
+    date: booking.date || new Date().toISOString().split('T')[0],
+    time: booking.time || booking.startTime || '',
+    duration: Number(booking.duration ?? 1),
+    price: Number.isFinite(parsedPrice) ? parsedPrice : 0,
+    status: normalizeStatus(booking.status),
+  };
+};
+
 const Bookings = () => {
   const navigate = useNavigate();
   const [filter, setFilter] = useState('upcoming');
@@ -31,7 +55,8 @@ const Bookings = () => {
   React.useEffect(() => {
     setIsLoading(true);
     courtService.getUserBookings(filter).then(res => {
-      setBookings(res.data || res);
+      const rawBookings = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+      setBookings(rawBookings.map(normalizeBooking));
       setIsLoading(false);
     }).catch(() => setIsLoading(false));
   }, [filter]);
@@ -150,11 +175,11 @@ const Bookings = () => {
                              </div>
                              <div className="space-y-1">
                                 <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest block">Time</span>
-                                <span className="text-sm font-bold text-text-primary">{booking.time} ({booking.duration}h)</span>
+                                <span className="text-sm font-bold text-text-primary">{booking.time || '--:--'} ({booking.duration}h)</span>
                              </div>
                              <div className="space-y-1">
                                 <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest block">Booking ID</span>
-                                <span className="text-sm font-mono font-bold text-text-primary">#PK-{booking.id.split('-')[1]}</span>
+                                <span className="text-sm font-mono font-bold text-text-primary">#PK-{String(booking.id).split('-')[1] || String(booking.id).slice(0, 6)}</span>
                              </div>
                              <div className="space-y-1">
                                 <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest block">Total Paid</span>
