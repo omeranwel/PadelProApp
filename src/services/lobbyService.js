@@ -1,4 +1,4 @@
-import api from './api';
+import { api } from './api';
 
 export const lobbyService = {
   // Create a new match lobby (private or open)
