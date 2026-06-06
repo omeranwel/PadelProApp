@@ -23,4 +23,6 @@ export const playerService = {
   sendRequest: async (targetUserId) => api.post('/friends/request', { targetUserId }),
   updateRequest: async (id, status) => api.patch(`/friends/request/${id}`, { action: status === 'accepted' ? 'accept' : 'decline' }),
   cancelRequest: async (id) => api.patch(`/friends/request/${id}`, { action: 'decline' }),
+  getSuggestions: async ({ query = '', excludeIds = [] } = {}) =>
+    api.get(`/players/suggest?query=${encodeURIComponent(query)}&excludeIds=${excludeIds.join(',')}`),
 };

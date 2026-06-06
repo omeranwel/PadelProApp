@@ -8,6 +8,7 @@ const router = Router();
 router.get('/leaderboard', ctrl.getLeaderboard);
 router.get('/me/stats', verifyToken, ctrl.getMyStats);
 router.get('/', verifyToken, ctrl.getPlayers);
+router.get('/suggest', verifyToken, ctrl.suggestPlayers);
 router.get('/:id', verifyToken, ctrl.getPlayerById);
 router.put('/me', verifyToken, ctrl.updateProfile);
 router.post('/me/avatar', verifyToken, upload.single('avatar'), ctrl.uploadAvatar);

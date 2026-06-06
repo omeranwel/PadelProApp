@@ -68,9 +68,9 @@ const PlayerSearchInput = ({ onSelect, excludeIds = [] }) => {
     setLoading(true);
     const timer = setTimeout(async () => {
       try {
-        const res = await playerService.getSuggestions({ query });
-        setResults((res.players || res.suggestions || []).filter(p => !excludeIds.includes(p.id)).slice(0, 6));
-      } catch (e) { /* ignore */ }
+        const res = await playerService.getSuggestions({ query, excludeIds });
+        setResults((res.players || []).slice(0, 6));
+      } catch (e) { console.warn('[PlayerSearch]', e); }
       setLoading(false);
     }, 350);
     return () => clearTimeout(timer);
@@ -115,8 +115,8 @@ export default function CreateMatchModal({ onClose, onCreated }) {
     city: currentUser?.city || 'Karachi',
     preferredDate: '',
     preferredTimeSlot: '',
-    skillLevelMin: Math.max(1, (currentUser?.skillRating || 3) - 1),
-    skillLevelMax: Math.min(7, (currentUser?.skillRating || 3) + 1),
+    skillLevelMin: isNaN(currentUser?.skillRating) || !currentUser?.skillRating ? 2.0 : Math.max(1.0, Math.min(6.5, (currentUser.skillRating || 3) - 1)),
+    skillLevelMax: isNaN(currentUser?.skillRating) || !currentUser?.skillRating ? 5.0 : Math.min(7.0, Math.max(1.5, (currentUser.skillRating || 3) + 1)),
     message: '',
   });
 
@@ -135,7 +135,12 @@ export default function CreateMatchModal({ onClose, onCreated }) {
     try {
       const payload = {
         mode,
-        ...prefs,
+        city: prefs.city,
+        preferredDate: prefs.preferredDate || undefined,
+        preferredTimeSlot: prefs.preferredTimeSlot || undefined,
+        skillLevelMin: isNaN(prefs.skillLevelMin) ? 1.0 : prefs.skillLevelMin,
+        skillLevelMax: isNaN(prefs.skillLevelMax) ? 7.0 : prefs.skillLevelMax,
+        message: prefs.message || undefined,
         ...(mode === 'PRIVATE' ? { inviteUserIds: selectedPlayers.map(p => p.id) } : {}),
       };
       const res = await lobbyService.create(payload);
@@ -218,7 +223,7 @@ export default function CreateMatchModal({ onClose, onCreated }) {
                       <PlayerSearchInput onSelect={addPlayer} excludeIds={[currentUser?.id, ...selectedPlayers.map(p => p.id)]} />
                     </div>
                     <div className="space-y-2">
-                      <LobbySlot slot={1} player={{ name: currentUser?.displayName || 'You', avatarUrl: currentUser?.photoURL, skillLevel: 'You' }} isYou />
+                      <LobbySlot slot={1} player={{ name: currentUser?.name || 'You', avatarUrl: currentUser?.avatarUrl, skillLevel: 'You' }} isYou />
                       {[0, 1, 2].map(i => (
                         <LobbySlot key={i} slot={i + 2} player={selectedPlayers[i] || null}
                           onRemove={selectedPlayers[i] ? () => setSelectedPlayers(selectedPlayers.filter((_, j) => j !== i)) : null} />
@@ -263,7 +268,7 @@ export default function CreateMatchModal({ onClose, onCreated }) {
                     {mode === 'OPEN' && (
                       <div>
                         <label className="text-xs font-bold text-text-muted uppercase tracking-wider block mb-2">
-                          Skill Range: {prefs.skillLevelMin.toFixed(1)} – {prefs.skillLevelMax.toFixed(1)}
+                          Skill Range: {isNaN(prefs.skillLevelMin) ? '1.0' : prefs.skillLevelMin.toFixed(1)} – {isNaN(prefs.skillLevelMax) ? '7.0' : prefs.skillLevelMax.toFixed(1)}
                         </label>
                         <div className="flex gap-3 items-center">
                           <input type="range" min={1} max={7} step={0.5} value={prefs.skillLevelMin}

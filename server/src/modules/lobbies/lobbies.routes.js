@@ -33,6 +33,8 @@ router.post('/', verifyToken, async (req, res) => {
     }
 
     const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
+    const skillMin = isNaN(parseFloat(skillLevelMin)) ? 1.0 : Math.min(7.0, Math.max(1.0, parseFloat(skillLevelMin)));
+    const skillMax = isNaN(parseFloat(skillLevelMax)) ? 7.0 : Math.min(7.0, Math.max(skillMin, parseFloat(skillLevelMax)));
 
     const lobby = await prisma.matchLobby.create({
       data: {
@@ -41,8 +43,8 @@ router.post('/', verifyToken, async (req, res) => {
         city,
         preferredDate: preferredDate ? new Date(preferredDate) : null,
         preferredTimeSlot,
-        skillLevelMin: parseFloat(skillLevelMin),
-        skillLevelMax: parseFloat(skillLevelMax),
+        skillLevelMin: skillMin,
+        skillLevelMax: skillMax,
         courtPreference,
         message,
         expiresAt,
@@ -81,7 +83,8 @@ router.post('/', verifyToken, async (req, res) => {
     res.json({ success: true, lobby });
   } catch (err) {
     console.error('[Create Lobby]', err);
-    res.status(500).json({ message: err.message });
+    const msg = err.message || err.meta?.cause || JSON.stringify(err) || 'Internal server error creating lobby';
+    res.status(500).json({ message: msg });
   }
 });
 
