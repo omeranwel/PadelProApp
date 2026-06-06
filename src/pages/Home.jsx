@@ -70,12 +70,19 @@ const Home = () => {
   return (
     <PageWrapper>
       {/* HERO */}
-      <section className="relative min-h-screen flex items-center pt-24 pb-16 px-6 overflow-hidden">
-        <div className="absolute inset-0 z-0">
-          <img src="/hero-bg.png" alt="Padel Court" className="w-full h-full object-cover opacity-[0.4]" />
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-bg-base/60 to-bg-base" />
-        </div>
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-accent/10 rounded-full blur-[120px] pointer-events-none z-0" />
+      <section
+        className="relative min-h-screen flex items-center pt-24 pb-16 px-6 overflow-hidden"
+        style={{
+          backgroundImage: 'url(/hero-bg.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center top',
+          backgroundRepeat: 'no-repeat',
+        }}
+      >
+        {/* Dark overlay for readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-bg-base/70 via-bg-base/50 to-bg-base pointer-events-none" />
+        <div className="absolute inset-0 bg-bg-base/30 pointer-events-none" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-accent/10 rounded-full blur-[120px] pointer-events-none" />
 
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center w-full relative z-10">
           <motion.div initial={{ opacity: 0, x: -40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }}>
@@ -280,12 +287,17 @@ const Home = () => {
       </section>
 
       {/* CTA */}
-      <section className="py-32 px-6 relative overflow-hidden">
-        <div className="absolute inset-0 z-0">
-          <img src="/hero-bg.png" alt="Padel Court" className="w-full h-full object-cover opacity-[0.35]" />
-          <div className="absolute inset-0 bg-gradient-to-t from-bg-base via-bg-base/60 to-transparent" />
-        </div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-accent/10 rounded-full blur-[120px] z-0" />
+      <section
+        className="py-32 px-6 relative overflow-hidden"
+        style={{
+          backgroundImage: 'url(/hero-bg.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center bottom',
+          backgroundRepeat: 'no-repeat',
+        }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-t from-bg-base via-bg-base/60 to-bg-base/80 pointer-events-none" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-accent/10 rounded-full blur-[120px]" />
         <div className="max-w-4xl mx-auto text-center relative z-10">
           <span className="text-xs font-bold uppercase tracking-[0.3em] text-accent mb-4 block">Ready to Play?</span>
           <h2 className="text-6xl md:text-9xl font-display mb-8">TAKE<br />THE COURT</h2>
