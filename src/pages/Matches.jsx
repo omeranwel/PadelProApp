@@ -96,7 +96,8 @@ const Matches = () => {
   return (
     <PageWrapper bg="/bg-player.png">
       {/* Hero */}
-      <section className="bg-[radial-gradient(circle_at_20%_0%,_#1E1030_0%,_#09090F_100%)] border-b border-border py-16 px-6">
+      <section className="relative border-b border-white/10 py-16 px-6 overflow-hidden">
+        <div className="absolute inset-0 bg-bg-card/40 backdrop-blur-sm -z-10" />
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-12">
           <div className="flex-1">
             <Badge variant="ai" className="mb-4 py-1.5 px-4 text-xs">AI SMART MATCHING</Badge>
@@ -257,7 +258,7 @@ const Matches = () => {
                       Log Result
                     </Button>
                   )}
-                  <div className="flex bg-bg-elevated p-1 rounded-lg border border-border">
+                  <div className="flex bg-bg-card/80 backdrop-blur-md p-1 rounded-lg border border-white/5 shadow-lg">
                     <button
                       onClick={() => setActiveTab('active')}
                       className={`px-4 py-2 text-xs font-bold rounded-md transition-colors ${activeTab === 'active' ? 'bg-bg-card text-accent-blue shadow-sm' : 'text-text-muted hover:text-text-primary'}`}

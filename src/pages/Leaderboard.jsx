@@ -106,7 +106,7 @@ const Leaderboard = () => {
       <section className="max-w-7xl mx-auto px-6 py-12">
         {/* Controls */}
         <div className="flex flex-wrap gap-4 items-center mb-10">
-          <div className="flex bg-bg-elevated rounded-xl border border-border p-1 gap-1">
+          <div className="flex bg-bg-card/80 backdrop-blur-md rounded-xl border border-white/5 p-1 gap-1 shadow-lg">
             {[['rating','Skill Rating'],['wins','Most Wins'],['winRate','Win Rate']].map(([key,label])=>(
               <button key={key} onClick={()=>setActiveTab(key)}
                 className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab===key?'bg-accent text-bg-base shadow-sm':'text-text-muted hover:text-text-primary'}`}>
@@ -117,7 +117,7 @@ const Leaderboard = () => {
           <div className="flex items-center gap-2 ml-auto">
             <Filter size={16} className="text-text-muted" />
             <select value={filter.skillLevel} onChange={e=>setFilter(f=>({...f,skillLevel:e.target.value}))}
-              className="bg-bg-elevated border border-border rounded-lg px-3 py-2 text-sm font-medium text-text-primary">
+              className="bg-bg-card/80 backdrop-blur-md border border-white/5 shadow-lg rounded-lg px-3 py-2 text-sm font-medium text-text-primary outline-none focus:border-accent/50">
               <option value="">All Levels</option>
               <option value="beginner">Beginner</option>
               <option value="intermediate">Intermediate</option>
@@ -139,12 +139,12 @@ const Leaderboard = () => {
                 {[top3[1], top3[0], top3[2]].map((p, i) => {
                   const isFirst = i === 1;
                   const heights = ['h-40', 'h-52', 'h-36'];
-                  const colors = ['bg-zinc-400/10 border-zinc-400/20', 'bg-yellow-400/10 border-yellow-400/20', 'bg-amber-600/10 border-amber-600/20'];
+                  const colors = ['bg-zinc-400/20 border-zinc-400/30', 'bg-yellow-400/20 border-yellow-400/30', 'bg-amber-600/20 border-amber-600/30'];
                   const textColors = ['text-zinc-300', 'text-yellow-400', 'text-amber-600'];
                   return (
                     <motion.div key={p.id} initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{delay:i*0.1}}
                       className="flex flex-col items-center gap-3">
-                      <div className={`w-full ${heights[i]} flex flex-col items-center justify-end pb-4 ${colors[i]} border rounded-2xl`}>
+                      <div className={`w-full ${heights[i]} flex flex-col items-center justify-end pb-4 ${colors[i]} backdrop-blur-md shadow-xl border rounded-2xl`}>
                         <Avatar name={p.name} src={p.avatarUrl} size={isFirst?'xl':'lg'} className="mb-2" />
                         <p className={`font-bold text-sm ${isFirst?'text-base':''}`}>{p.name.split(' ')[0]}</p>
                         <p className={`font-mono font-bold text-xl ${textColors[i]}`}>{p.skillRating?.toFixed(1)}</p>

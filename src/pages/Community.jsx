@@ -177,24 +177,25 @@ const Community = () => {
   return (
     <PageWrapper bg="/bg-player.png">
       {/* Community Header */}
-      <section className="bg-bg-card border-b border-border py-16 px-6">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
+      <section className="relative border-b border-white/10 py-16 px-6 overflow-hidden">
+        <div className="absolute inset-0 bg-bg-card/40 backdrop-blur-md -z-10" />
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8 relative z-10">
            <div className="text-center md:text-left">
-              <h1 className="text-5xl font-bold font-display mb-4">Community Square</h1>
+              <h1 className="text-5xl font-bold font-display mb-4 text-white">Community Square</h1>
               <p className="text-text-secondary text-lg max-w-md">Connect with Karachi's fastest growing athletic network.</p>
            </div>
-           <div className="flex bg-bg-elevated p-1.5 rounded-2xl border border-border shadow-2xl overflow-x-auto max-w-full">
+           <div className="flex bg-bg-card/60 backdrop-blur-md p-1.5 rounded-2xl border border-white/10 shadow-2xl overflow-x-auto max-w-full">
               {tabs.map((tab) => (
                 <button
                   key={tab}
                   onClick={() => { setActiveTab(tab); setActiveForumTopic(null); }}
                   className={`
                     px-8 py-3 text-sm font-bold rounded-xl transition-all relative
-                    ${activeTab === tab ? 'text-text-primary' : 'text-text-muted hover:text-text-secondary'}
+                    ${activeTab === tab ? 'text-white' : 'text-text-muted hover:text-white'}
                   `}
                 >
                   {activeTab === tab && (
-                    <motion.div layoutId="comm-tab" className="absolute inset-0 bg-bg-card border border-border rounded-xl shadow-lg" />
+                    <motion.div layoutId="comm-tab" className="absolute inset-0 bg-accent/20 border border-accent/40 rounded-xl shadow-[0_0_15px_rgba(0,230,118,0.3)]" />
                   )}
                   <span className="relative z-10 flex items-center gap-2">
                     {tab === 'Feed' && <TrendingUp size={16} />}
@@ -214,17 +215,17 @@ const Community = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
            {/* Sidebar / Filters */}
            <div className="lg:col-span-3 space-y-12">
-              <div className="space-y-6">
+              <Card className="space-y-6">
                   <h4 className="text-xs font-bold uppercase tracking-[0.2em] text-text-muted">Explore Topics</h4>
                   <div className="space-y-2">
                      {['Tournament News', 'Gear Talk', 'Rules & Strategy', 'Court Reviews', 'Matchmaking Help'].map(topic => (
-                       <button key={topic} onClick={() => { setActiveTab('Forums'); setActiveForumTopic(null); }} className="w-full text-left px-4 py-3 rounded-xl border border-transparent hover:border-border hover:bg-bg-card transition-all text-sm font-semibold text-text-secondary hover:text-text-primary flex items-center justify-between group">
+                       <button key={topic} onClick={() => { setActiveTab('Forums'); setActiveForumTopic(null); }} className="w-full text-left px-4 py-3 rounded-xl border border-transparent hover:border-white/10 hover:bg-white/5 transition-all text-sm font-semibold text-text-secondary hover:text-white flex items-center justify-between group">
                           {topic}
-                          <ArrowRight size={14} className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" />
+                          <ArrowRight size={14} className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all text-accent" />
                        </button>
                      ))}
                   </div>
-              </div>
+              </Card>
 
               <Card className="bg-accent-blue/5 border-accent-blue/10 p-6 space-y-4">
                   <h5 className="font-bold flex items-center gap-2"><Award size={18} className="text-accent-blue" /> Verified Pro's</h5>

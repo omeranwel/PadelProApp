@@ -161,7 +161,7 @@ const Tournaments = () => {
         <div className="flex gap-2 mb-10 flex-wrap">
           {[['all','All Tournaments'],['registration_open','Registration Open'],['upcoming','Upcoming'],['in_progress','In Progress'],['completed','Completed']].map(([key,label])=>(
             <button key={key} onClick={()=>setFilter(key)}
-              className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all ${filter===key?'bg-accent text-bg-base border-accent':'border-border text-text-muted hover:text-text-primary hover:border-border-strong'}`}>
+              className={`px-4 py-2 rounded-xl text-sm font-bold border transition-all backdrop-blur-md ${filter===key?'bg-accent text-bg-base border-accent':'bg-bg-card/80 border-white/5 text-text-muted hover:text-text-primary hover:border-accent/30'}`}>
               {label}
               {key!=='all' && <span className="ml-2 text-xs opacity-70">({tournaments.filter(t=>t.status===key).length})</span>}
             </button>
@@ -173,9 +173,9 @@ const Tournaments = () => {
             <div className="w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin" />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="py-20 text-center border-2 border-dashed border-border rounded-3xl">
-            <Trophy size={40} className="text-text-muted mx-auto mb-4" />
-            <p className="text-text-secondary">No tournaments found.</p>
+          <div className="py-20 text-center border border-white/5 rounded-3xl bg-bg-card/60 backdrop-blur-md shadow-xl">
+            <Trophy size={40} className="text-text-muted mx-auto mb-4 opacity-50" />
+            <p className="text-text-secondary text-lg">No tournaments found.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
