@@ -74,7 +74,7 @@ const App = () => {
 
   return (
     <Router>
-      <div className="min-h-screen bg-bg-base text-text-primary selection:bg-accent/20 selection:text-accent">
+      <div className="min-h-screen bg-transparent text-text-primary selection:bg-accent/20 selection:text-accent">
         <Navbar />
       <Suspense fallback={<div className="h-screen flex items-center justify-center"><Spinner size="lg" /></div>}>
         <Routes>

@@ -46,10 +46,15 @@
     @apply border-border;
   }
 
+  html {
+    background-color: #070D1A;
+  }
+
   body {
-    @apply bg-bg-base text-text-primary font-body antialiased;
+    @apply text-text-primary font-body antialiased;
     margin: 0;
     padding: 0;
+    background-color: #070D1A;
   }
 
   h1, h2, h3, h4, h5, h6 {
