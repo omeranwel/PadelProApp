@@ -39,6 +39,7 @@ import adminRoutes from "./modules/admin/admin.routes.js";
 import clubRoutes from "./modules/clubs/clubs.routes.js";
 import reviewRoutes from "./modules/reviews/reviews.routes.js";
 import friendRoutes from "./modules/friends/friends.routes.js";
+import lobbyRoutes from "./modules/lobbies/lobbies.routes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
@@ -132,6 +133,8 @@ app.use("/api/reviews", reviewRoutes);
 app.use("/reviews", reviewRoutes);
 app.use("/api/friends", friendRoutes);
 app.use("/friends", friendRoutes);
+app.use("/api/lobbies", lobbyRoutes);
+app.use("/lobbies", lobbyRoutes);
 
 app.get('/api/debug/routes', (req, res) => {
   const routes = app._router.stack
