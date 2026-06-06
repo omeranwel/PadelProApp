@@ -13,6 +13,8 @@ import { playerService } from '../services/playerService';
 import { useAuthStore } from '../store/authStore';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import Spinner from '../components/ui/Spinner';
+import { api } from '../services/api';
 
 const SKILL_LEVELS = ['beginner', 'intermediate', 'advanced', 'professional'];
 const CITIES = ['All Cities', 'Karachi', 'Lahore', 'Islamabad', 'Rawalpindi', 'Faisalabad'];
@@ -29,52 +31,105 @@ const formatRating = (r) => (typeof r === 'number' ? r.toFixed(1) : '—');
 const winRatePct  = (r) => (typeof r === 'number' ? `${Math.round(r)}%` : '—');
 
 // ─── Single Player Card ────────────────────────────────────────────
-function PlayerProfileCard({ player, currentUserId, onMessage, onInvite, onFriend }) {
-  const isFriend     = player.isFriend;
-  const requestSent  = player.requestSent;
+export function PlayerProfileCard({ player: initialPlayer, onMessage }) {
+  const navigate = useNavigate();
+
+  // Friendship state: 'none' | 'request_sent' | 'request_received' | 'friends'
+  const [friendStatus, setFriendStatus] = useState(initialPlayer.friendshipStatus || 'none');
+  const [friendRequestId, setFriendRequestId] = useState(initialPlayer.friendRequestId || null);
+  const [friendLoading, setFriendLoading] = useState(false);
+
+  useEffect(() => {
+    // Fetch initial status if not provided
+    const checkStatus = async () => {
+      if (initialPlayer.friendshipStatus) return;
+      try {
+        const res = await api.get(`/friends/status/${initialPlayer.id}`);
+        setFriendStatus(res.status);
+        if (res.requestId) setFriendRequestId(res.requestId);
+      } catch (e) {}
+    };
+    checkStatus();
+  }, [initialPlayer.id, initialPlayer.friendshipStatus]);
+
+  async function handleFriendAction() {
+    if (friendLoading) return;
+    setFriendLoading(true);
+
+    try {
+      if (friendStatus === 'none') {
+        const data = await api.post('/friends/request', { targetUserId: initialPlayer.id });
+        setFriendStatus('request_sent');
+        setFriendRequestId(data.request.id);
+        toast.success(`Friend request sent to ${initialPlayer.name}`);
+      } else if (friendStatus === 'request_sent') {
+        await api.delete(`/friends/request/${friendRequestId}`);
+        setFriendStatus('none');
+        setFriendRequestId(null);
+        toast.success('Request cancelled');
+      } else if (friendStatus === 'request_received') {
+        await api.patch(`/friends/request/${friendRequestId}`, { action: 'accept' });
+        setFriendStatus('friends');
+        toast.success(`You are now friends with ${initialPlayer.name}`);
+      } else if (friendStatus === 'friends') {
+        if (window.confirm(`Remove ${initialPlayer.name} from friends?`)) {
+          await api.delete(`/friends/${initialPlayer.id}`);
+          setFriendStatus('none');
+          toast.success('Friend removed');
+        }
+      }
+    } catch (err) {
+      toast.error(err.message || 'Action failed');
+    } finally {
+      setFriendLoading(false);
+    }
+  }
+
+  const btnConfig = {
+    none: { label: '+ Add', className: 'bg-accent/20 text-accent border border-accent/30 hover:bg-accent/30', title: 'Send friend request' },
+    request_sent: { label: '✓ Requested', className: 'bg-transparent border border-accent text-accent hover:bg-red-500/10 hover:border-red-500 hover:text-red-500 group-hover:content-cancel', title: 'Click to cancel request' },
+    request_received: { label: '✓ Accept', className: 'bg-blue-500 text-white animate-pulse', title: 'Accept their friend request' },
+    friends: { label: '✓ Friends', className: 'bg-transparent border border-white/20 text-text-secondary hover:border-red-500 hover:text-red-500', title: 'Click to remove friend' },
+  }[friendStatus] || { label: '...', className: 'bg-white/5 text-text-muted', title: '' };
 
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} whileHover={{ y: -3 }} transition={{ duration: 0.25 }}>
       <Card className="flex flex-col h-full overflow-hidden group">
-        {/* Top accent bar */}
-        <div className={`h-1 w-full ${SKILL_COLORS[player.skillLevel]?.split(' ')[0] || 'bg-accent/20'}`} />
-
+        <div className={`h-1 w-full ${SKILL_COLORS[initialPlayer.skillLevel]?.split(' ')[0] || 'bg-accent/20'}`} />
         <div className="p-5 flex-1 flex flex-col">
-          {/* Avatar + name */}
           <div className="flex items-start gap-4 mb-4">
             <div className="relative shrink-0">
-              <Avatar name={player.name} src={player.avatarUrl} size="lg" className="ring-2 ring-white/10" />
-              {player.isVerified && (
+              <Avatar name={initialPlayer.name} src={initialPlayer.avatarUrl} size="lg" className="ring-2 ring-white/10" />
+              {initialPlayer.isVerified && (
                 <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-accent rounded-full flex items-center justify-center border-2 border-bg-elevated">
                   <Check size={9} className="text-bg-base font-bold" />
                 </div>
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-bold text-white truncate leading-tight">{player.name}</h3>
+              <h3 className="font-bold text-white truncate leading-tight">{initialPlayer.name}</h3>
               <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border capitalize ${SKILL_COLORS[player.skillLevel] || 'bg-white/5 text-white border-white/10'}`}>
-                  {player.skillLevel}
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border capitalize ${SKILL_COLORS[initialPlayer.skillLevel] || 'bg-white/5 text-white border-white/10'}`}>
+                  {initialPlayer.skillLevel}
                 </span>
-                {player.city && (
+                {initialPlayer.city && (
                   <span className="flex items-center gap-1 text-[10px] text-text-muted">
-                    <MapPin size={9} /> {player.city}
+                    <MapPin size={9} /> {initialPlayer.city}
                   </span>
                 )}
               </div>
             </div>
             <div className="text-right shrink-0">
-              <p className="text-xl font-bold text-accent font-mono">{formatRating(player.skillRating)}</p>
+              <p className="text-xl font-bold text-accent font-mono">{formatRating(initialPlayer.skillRating)}</p>
               <p className="text-[9px] text-text-muted uppercase tracking-wider">Rating</p>
             </div>
           </div>
 
-          {/* Stats row */}
           <div className="grid grid-cols-3 gap-2 mb-4">
             {[
-              { label: 'Wins',    value: player.totalWins ?? '—',              icon: Trophy },
-              { label: 'Win %',  value: winRatePct(player.winRate),            icon: TrendingUp },
-              { label: 'Streak', value: player.currentStreak > 0 ? `${player.currentStreak}🔥` : (player.currentStreak ?? '—'), icon: Zap },
+              { label: 'Wins', value: initialPlayer.totalWins ?? '—', icon: Trophy },
+              { label: 'Win %', value: winRatePct(initialPlayer.winRate), icon: TrendingUp },
+              { label: 'Streak', value: initialPlayer.currentStreak > 0 ? `${initialPlayer.currentStreak}🔥` : (initialPlayer.currentStreak ?? '—'), icon: Zap },
             ].map(s => (
               <div key={s.label} className="bg-bg-base/40 rounded-xl p-2 text-center border border-white/5">
                 <p className="text-sm font-bold text-white">{s.value}</p>
@@ -83,64 +138,38 @@ function PlayerProfileCard({ player, currentUserId, onMessage, onInvite, onFrien
             ))}
           </div>
 
-          {/* Style + position */}
           <div className="flex gap-2 flex-wrap mb-4">
-            {player.playingStyle && (
+            {initialPlayer.playingStyle && (
               <span className="text-[10px] px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-text-secondary capitalize">
-                {player.playingStyle}
+                {initialPlayer.playingStyle}
               </span>
             )}
-            {player.preferredPosition && player.preferredPosition !== 'both' && (
+            {initialPlayer.preferredPosition && initialPlayer.preferredPosition !== 'both' && (
               <span className="text-[10px] px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-text-secondary capitalize">
-                {player.preferredPosition} side
-              </span>
-            )}
-            {player.dominantHand && (
-              <span className="text-[10px] px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-text-secondary">
-                {player.dominantHand === 'right' ? '🤜 Right' : '🤛 Left'}
+                {initialPlayer.preferredPosition === 'left' ? '🧤' : initialPlayer.preferredPosition === 'right' ? '🏓' : '↔️'} {initialPlayer.preferredPosition}
               </span>
             )}
           </div>
 
-          {/* Bio */}
-          {player.bio && (
-            <p className="text-xs text-text-muted line-clamp-2 mb-4 italic flex-1">"{player.bio}"</p>
-          )}
-
-          {/* Actions */}
-          <div className="mt-auto flex gap-2">
-            <Button
-              size="sm"
-              variant="ghost"
-              icon={MessageCircle}
-              onClick={() => onMessage(player)}
-              className="flex-1 !justify-center border border-white/10 hover:border-accent/30 hover:text-accent"
-            >
+          <div className="mt-auto grid grid-cols-3 gap-2">
+            <Button size="sm" variant="ghost" onClick={() => navigate(`/players/${initialPlayer.id}`)} className="col-span-1 !justify-center border border-white/10 text-[10px] px-1 hover:border-white/30">
+              Profile
+            </Button>
+            <Button size="sm" variant="ghost" icon={MessageCircle} onClick={() => onMessage(initialPlayer)} className="col-span-1 !justify-center border border-white/10 hover:border-accent/30 hover:text-accent text-[10px] px-1">
               Message
             </Button>
-            {isFriend ? (
-              <Button size="sm" variant="ghost" className="flex-1 !justify-center border border-success/20 text-success" disabled>
-                <UserCheck size={13} /> Friends
-              </Button>
-            ) : requestSent ? (
-              <Button size="sm" variant="ghost" className="flex-1 !justify-center text-text-muted" disabled>
-                Pending
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                icon={UserPlus}
-                onClick={() => onFriend(player)}
-                className="flex-1 !justify-center"
-              >
-                Add
-              </Button>
-            )}
+            <button
+              className={`col-span-1 flex items-center justify-center rounded-lg text-[10px] font-bold px-1 transition-all ${btnConfig.className} ${friendLoading ? 'opacity-70' : ''}`}
+              onClick={handleFriendAction} disabled={friendLoading} title={btnConfig.title}
+              onMouseEnter={(e) => { if (friendStatus === 'request_sent') e.currentTarget.innerText = 'Cancel?'; else if (friendStatus === 'friends') e.currentTarget.innerText = 'Remove'; }}
+              onMouseLeave={(e) => { if (friendStatus === 'request_sent') e.currentTarget.innerText = btnConfig.label; else if (friendStatus === 'friends') e.currentTarget.innerText = btnConfig.label; }}
+            >
+              {friendLoading ? <Spinner size="xs" /> : btnConfig.label}
+            </button>
           </div>
 
-          {/* Invite to match */}
           <button
-            onClick={() => onInvite(player)}
+            onClick={() => navigate(`/matches?invitePlayer=${initialPlayer.id}&name=${encodeURIComponent(initialPlayer.name)}`)}
             className="mt-2 w-full py-2 rounded-xl bg-accent/5 hover:bg-accent/10 border border-accent/10 hover:border-accent/30 text-accent text-xs font-semibold transition-all"
           >
             🎾 Invite to Match
@@ -230,16 +259,6 @@ export default function Players() {
     navigate(`/chat?userId=${player.id}`);
   };
 
-  const handleFriend = async (player) => {
-    try {
-      await playerService.sendRequest(player.id);
-      toast.success(`Friend request sent to ${player.name}!`);
-      setPlayers(prev => prev.map(p => p.id === player.id ? { ...p, requestSent: true } : p));
-    } catch (err) {
-      toast.error(err.message || 'Failed to send request');
-    }
-  };
-
   const handleInvite = (player) => {
     navigate(`/matches?invitePlayer=${player.id}&name=${encodeURIComponent(player.name)}`);
   };
@@ -306,10 +325,7 @@ export default function Players() {
                 <motion.div key={player.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
                   <PlayerProfileCard
                     player={player}
-                    currentUserId={currentUser?.id}
                     onMessage={handleMessage}
-                    onInvite={handleInvite}
-                    onFriend={handleFriend}
                   />
                 </motion.div>
               ))}

@@ -1,336 +1,215 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import {
-  MapPin, Zap, Trophy, Star, TrendingUp, Activity, Calendar,
-  MessageSquare, UserPlus, UserCheck, Clock, ChevronLeft, Shield
-} from 'lucide-react';
+import { MapPin, Trophy, TrendingUp, Zap, MessageCircle, UserPlus, UserCheck, ArrowLeft, Calendar, Shield } from 'lucide-react';
 import PageWrapper from '../components/layout/PageWrapper';
 import Card from '../components/ui/Card';
-import Badge from '../components/ui/Badge';
 import Avatar from '../components/ui/Avatar';
 import Button from '../components/ui/Button';
 import Spinner from '../components/ui/Spinner';
 import { api } from '../services/api';
-import { playerService } from '../services/playerService';
-import { chatService } from '../services/chatService';
-import { useAuthStore } from '../store/authStore';
-import { useMatchStore } from '../store/matchStore';
 import toast from 'react-hot-toast';
-
-const StatBox = ({ label, value, sub, color = 'text-text-primary' }) => (
-  <div className="bg-bg-elevated rounded-2xl p-4 text-center">
-    <p className={`text-2xl font-bold font-display ${color}`}>{value}</p>
-    {sub && <p className="text-xs text-text-muted mt-0.5">{sub}</p>}
-    <p className="text-xs text-text-muted mt-1 uppercase tracking-wider font-semibold">{label}</p>
-  </div>
-);
-
-const FormDot = ({ result }) => (
-  <div
-    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-      result === 'W' ? 'bg-success/20 text-success border border-success/30' : 'bg-danger/20 text-danger border border-danger/30'
-    }`}
-  >
-    {result}
-  </div>
-);
 
 export default function PlayerProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, isLoggedIn } = useAuthStore();
-  const { sendRequest, sentRequests } = useMatchStore();
-
-  const [player, setPlayer] = useState(null);
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [friendStatus, setFriendStatus] = useState('none'); // none | request_sent | request_received | friends
-  const [chatLoading, setChatLoading] = useState(false);
-  const [sending, setSending] = useState(false);
+  const [friendLoading, setFriendLoading] = useState(false);
 
   useEffect(() => {
-    if (!id) return;
-    setLoading(true);
-    api.get(`/players/${id}`)
-      .then(data => {
-        setPlayer(data);
-        // Fetch friend status
-        return api.get('/friends').then(res => {
-          const friends = res.friends || [];
-          if (friends.find(f => f.id === id)) { setFriendStatus('friends'); return; }
-          return api.get('/friends/requests').then(r => {
-            const reqs = r.requests || [];
-            if (reqs.find(req => req.senderId === id)) setFriendStatus('request_received');
-          });
-        });
-      })
-      .catch(() => toast.error('Failed to load player profile'))
-      .finally(() => setLoading(false));
-  }, [id]);
-
-  // Also check if we've sent a request
-  useEffect(() => {
-    if (sentRequests?.includes(id)) setFriendStatus('request_sent');
-  }, [sentRequests, id]);
-
-  const handleChallenge = async () => {
-    if (!isLoggedIn) { toast.error('Please log in first'); return; }
-    if (friendStatus === 'friends' || friendStatus === 'request_sent') return;
-    
-    // Optimistic UI update
-    const prevStatus = friendStatus;
-    setFriendStatus('request_sent');
-    if (sendRequest) sendRequest(id);
-    
-    setSending(true);
-    try {
-      await playerService.sendRequest(id);
-      toast.success(`Challenge sent to ${player.name}!`);
-    } catch (err) {
-      setFriendStatus(prevStatus); // Revert
-      toast.error(err.message || 'Failed to send request');
-    } finally {
-      setSending(false);
+    async function loadProfile() {
+      try {
+        const res = await api.get(`/players/${id}`);
+        setData(res);
+      } catch (err) {
+        toast.error('Failed to load profile');
+        navigate('/players');
+      } finally {
+        setLoading(false);
+      }
     }
-  };
+    loadProfile();
+  }, [id, navigate]);
 
-  const handleChat = async () => {
-    if (!isLoggedIn) { toast.error('Please log in first'); return; }
-    setChatLoading(true);
+  if (loading) {
+    return (
+      <PageWrapper>
+        <div className="flex items-center justify-center h-full min-h-[50vh]">
+          <Spinner size="lg" />
+        </div>
+      </PageWrapper>
+    );
+  }
+
+  if (!data) return null;
+
+  const { player, recentMatches, friendshipStatus, friendRequestId, isOwnProfile } = data;
+
+  async function handleFriendAction() {
+    if (friendLoading) return;
+    setFriendLoading(true);
+
     try {
-      const res = await chatService.createConversation(id);
-      const convoId = res.id || res.conversation?.id;
-      navigate(`/chat?conversation=${convoId}`);
+      if (friendshipStatus === 'none') {
+        const res = await api.post('/friends/request', { targetUserId: player.id });
+        setData(d => ({ ...d, friendshipStatus: 'request_sent', friendRequestId: res.request.id }));
+        toast.success(`Friend request sent to ${player.name}`);
+      } else if (friendshipStatus === 'request_sent') {
+        await api.delete(`/friends/request/${friendRequestId}`);
+        setData(d => ({ ...d, friendshipStatus: 'none', friendRequestId: null }));
+        toast.success('Request cancelled');
+      } else if (friendshipStatus === 'request_received') {
+        await api.patch(`/friends/request/${friendRequestId}`, { action: 'accept' });
+        setData(d => ({ ...d, friendshipStatus: 'friends' }));
+        toast.success(`You are now friends with ${player.name}`);
+      } else if (friendshipStatus === 'friends') {
+        if (window.confirm(`Remove ${player.name} from friends?`)) {
+          await api.delete(`/friends/${player.id}`);
+          setData(d => ({ ...d, friendshipStatus: 'none' }));
+          toast.success('Friend removed');
+        }
+      }
     } catch (err) {
-      toast.error('Could not open conversation');
+      toast.error(err.message || 'Action failed');
     } finally {
-      setChatLoading(false);
+      setFriendLoading(false);
     }
-  };
+  }
 
-  if (loading) return (
-    <PageWrapper bg="/bg-player.png">
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Spinner size="lg" />
-      </div>
-    </PageWrapper>
-  );
-
-  if (!player) return (
-    <PageWrapper bg="/bg-player.png">
-      <div className="text-center py-24 text-text-muted">Player not found.</div>
-    </PageWrapper>
-  );
-
-  const matchesPlayed = (player.totalWins || 0) + (player.totalLosses || 0);
-  const isOwnProfile = user?.id === id;
-
-  const challengeLabel = {
-    none: 'Challenge',
-    request_sent: 'Request Sent ✓',
-    request_received: 'Accept Request',
-    friends: 'Friends ✓',
-  }[friendStatus] || 'Challenge';
+  const btnConfig = {
+    none: { label: '+ Add Friend', className: 'bg-accent/20 text-accent border border-accent/30 hover:bg-accent/30' },
+    request_sent: { label: '✓ Requested', className: 'bg-transparent border border-accent text-accent hover:bg-red-500/10 hover:border-red-500 hover:text-red-500' },
+    request_received: { label: '✓ Accept Request', className: 'bg-blue-500 text-white animate-pulse' },
+    friends: { label: '✓ Friends', className: 'bg-transparent border border-white/20 text-text-secondary hover:border-red-500 hover:text-red-500' },
+  }[friendshipStatus] || { label: '...', className: 'bg-white/5 text-text-muted' };
 
   return (
-    <PageWrapper bg="/bg-player.png">
-      <div className="max-w-4xl mx-auto px-6 pb-24">
-        {/* Back */}
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-sm text-text-muted hover:text-text-primary transition-colors mt-6 mb-8 group"
-        >
-          <ChevronLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
-          Back to Players
+    <PageWrapper bg="/bg-courts.png">
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-text-muted hover:text-white mb-6 transition-colors">
+          <ArrowLeft size={16} /> Back
         </button>
 
-        {/* Hero Card */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <Card className="p-8 mb-6 relative overflow-hidden">
-            {/* Background gradient */}
-            <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-ai-purple/5 pointer-events-none" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Main Info Column */}
+          <div className="md:col-span-1 space-y-6">
+            <Card className="p-6 flex flex-col items-center text-center">
+              <Avatar name={player.name} src={player.avatarUrl} size="xl" className="ring-4 ring-white/10 mb-4" />
+              <h1 className="text-2xl font-bold text-white mb-1">{player.name}</h1>
+              <p className="text-sm text-text-muted flex items-center gap-1 mb-4">
+                <MapPin size={14} /> {player.city || 'No city set'}
+              </p>
 
-            <div className="relative flex flex-col sm:flex-row gap-6 items-start sm:items-center">
-              <div className="relative shrink-0">
-                <Avatar name={player.name} src={player.avatarUrl} size="2xl" className="ring-4 ring-accent/20 ring-offset-4 ring-offset-bg-card" />
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-success rounded-full border-4 border-bg-card" />
-                {player.isVerified && (
-                  <div className="absolute -top-1 -right-1 w-6 h-6 bg-accent-blue rounded-full border-2 border-bg-card flex items-center justify-center">
-                    <Shield size={10} className="text-white" />
-                  </div>
+              <div className="flex gap-2 mb-6 w-full">
+                {!isOwnProfile && (
+                  <>
+                    <Button variant="secondary" className="flex-1 text-xs px-2" icon={MessageCircle} onClick={() => navigate(`/chat?userId=${player.id}`)}>
+                      Message
+                    </Button>
+                    <button
+                      className={`flex-1 flex items-center justify-center rounded-xl text-xs font-bold transition-all ${btnConfig.className} ${friendLoading ? 'opacity-70' : ''}`}
+                      onClick={handleFriendAction} disabled={friendLoading}
+                      onMouseEnter={(e) => { if (friendshipStatus === 'request_sent') e.currentTarget.innerText = 'Cancel?'; else if (friendshipStatus === 'friends') e.currentTarget.innerText = 'Remove'; }}
+                      onMouseLeave={(e) => { if (friendshipStatus === 'request_sent') e.currentTarget.innerText = btnConfig.label; else if (friendshipStatus === 'friends') e.currentTarget.innerText = btnConfig.label; }}
+                    >
+                      {friendLoading ? <Spinner size="xs" /> : btnConfig.label}
+                    </button>
+                  </>
+                )}
+                {isOwnProfile && (
+                  <Button variant="secondary" className="w-full" onClick={() => navigate('/settings')}>
+                    Edit Profile
+                  </Button>
                 )}
               </div>
 
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-3 mb-2">
-                  <h1 className="text-3xl font-bold font-display">{player.name}</h1>
-                  {player.totalWins >= 20 && <Trophy size={20} className="text-warning" />}
+              <div className="w-full border-t border-white/10 pt-4 grid grid-cols-2 gap-4 text-left">
+                <div>
+                  <p className="text-xs text-text-muted mb-1 uppercase tracking-wider">Skill Level</p>
+                  <p className="font-semibold text-white capitalize">{player.skillLevel}</p>
                 </div>
-                <div className="flex flex-wrap gap-2 mb-3">
-                  <Badge variant={player.skillLevel}>{(player.skillLevel || 'beginner').toUpperCase()}</Badge>
-                  <span className="text-sm font-mono font-bold text-accent border border-accent/20 bg-accent/5 px-2.5 py-0.5 rounded-full">
-                    {(player.skillRating || 3.0).toFixed(1)} Rating
-                  </span>
-                  {player.city && (
-                    <span className="text-sm text-text-muted flex items-center gap-1">
-                      <MapPin size={12} /> {player.city}
-                      {player.preferredArea && ` · ${player.preferredArea}`}
-                    </span>
-                  )}
+                <div>
+                  <p className="text-xs text-text-muted mb-1 uppercase tracking-wider">Rating</p>
+                  <p className="font-semibold text-accent font-mono">{player.skillRating?.toFixed(1)}</p>
                 </div>
-                {player.bio && (
-                  <p className="text-text-secondary italic text-sm leading-relaxed mb-4 max-w-lg">
-                    "{player.bio}"
-                  </p>
-                )}
-                <p className="text-xs text-text-muted flex items-center gap-1">
-                  <Clock size={11} /> Active {player.lastActive || 'recently'}
-                </p>
+                <div>
+                  <p className="text-xs text-text-muted mb-1 uppercase tracking-wider">Style</p>
+                  <p className="font-semibold text-white capitalize">{player.playingStyle || 'Any'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-text-muted mb-1 uppercase tracking-wider">Position</p>
+                  <p className="font-semibold text-white capitalize">{player.preferredPosition || 'Any'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-text-muted mb-1 uppercase tracking-wider">Hand</p>
+                  <p className="font-semibold text-white capitalize">{player.dominantHand || 'Any'}</p>
+                </div>
               </div>
-
-              {!isOwnProfile && (
-                <div className="flex flex-col gap-3 shrink-0 w-full sm:w-auto">
-                  <Button
-                    onClick={handleChat}
-                    disabled={chatLoading}
-                    variant="secondary"
-                    icon={MessageSquare}
-                    className="w-full sm:w-44"
-                  >
-                    {chatLoading ? 'Opening...' : 'Message'}
-                  </Button>
-                  <Button
-                    onClick={handleChallenge}
-                    disabled={sending || friendStatus === 'request_sent' || friendStatus === 'friends'}
-                    icon={friendStatus === 'friends' || friendStatus === 'request_sent' ? UserCheck : UserPlus}
-                    className={`w-full sm:w-44 ${
-                      friendStatus === 'friends' ? '!bg-success/20 !text-success border border-success/30' :
-                      friendStatus === 'request_sent' ? '!bg-accent/10 !text-accent border border-accent/30' : ''
-                    }`}
-                  >
-                    {sending ? 'Sending...' : challengeLabel}
-                  </Button>
-                </div>
-              )}
-              {isOwnProfile && (
-                <Button onClick={() => navigate('/profile')} variant="outline" className="shrink-0">
-                  Edit Profile
-                </Button>
-              )}
-            </div>
-          </Card>
-        </motion.div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left: Stats */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Stats Grid */}
-            <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-              <h3 className="text-sm font-bold uppercase tracking-widest text-text-muted mb-4 flex items-center gap-2">
-                <Activity size={14} /> Statistics
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <StatBox label="Matches" value={matchesPlayed} />
-                <StatBox label="Wins" value={player.totalWins || 0} color="text-success" />
-                <StatBox label="Losses" value={player.totalLosses || 0} color="text-danger" />
-                <StatBox label="Win Rate" value={`${(player.winRate || 0).toFixed(0)}%`} color="text-accent" />
-              </div>
-            </motion.div>
-
-            {/* Recent Form */}
-            {(player.recentForm || []).length > 0 && (
-              <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-                <h3 className="text-sm font-bold uppercase tracking-widest text-text-muted mb-4 flex items-center gap-2">
-                  <TrendingUp size={14} /> Recent Form
-                </h3>
-                <Card className="p-5">
-                  <div className="flex gap-2 items-center flex-wrap">
-                    {(player.recentForm || []).slice(-10).map((r, i) => (
-                      <FormDot key={i} result={r} />
-                    ))}
-                  </div>
-                  <p className="text-xs text-text-muted mt-3">
-                    Streak: <span className={`font-bold ${(player.currentStreak || 0) > 0 ? 'text-success' : 'text-danger'}`}>
-                      {(player.currentStreak || 0) > 0 ? `+${player.currentStreak} W` : `${player.currentStreak} L`}
-                    </span>
-                  </p>
-                </Card>
-              </motion.div>
-            )}
-
-            {/* Rating History chart (simple bars) */}
-            {Array.isArray(player.skillRatingHistory) && player.skillRatingHistory.length > 1 && (
-              <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-                <h3 className="text-sm font-bold uppercase tracking-widest text-text-muted mb-4 flex items-center gap-2">
-                  <Star size={14} /> Rating History
-                </h3>
-                <Card className="p-5">
-                  <div className="flex items-end gap-1 h-16">
-                    {player.skillRatingHistory.slice(-20).map((entry, i, arr) => {
-                      const vals = arr.map(e => e.rating || e);
-                      const min = Math.min(...vals) - 0.2;
-                      const max = Math.max(...vals) + 0.2;
-                      const pct = ((( entry.rating || entry) - min) / (max - min)) * 100;
-                      const isUp = i > 0 && (entry.rating || entry) >= (arr[i-1].rating || arr[i-1]);
-                      return (
-                        <div
-                          key={i}
-                          title={`${(entry.rating || entry).toFixed(2)}`}
-                          style={{ height: `${Math.max(pct, 8)}%` }}
-                          className={`flex-1 rounded-t-sm transition-all ${isUp ? 'bg-success/60' : 'bg-danger/60'}`}
-                        />
-                      );
-                    })}
-                  </div>
-                  <div className="flex justify-between text-[10px] text-text-muted mt-2">
-                    <span>Earliest</span>
-                    <span>Latest: {(player.skillRating || 3).toFixed(2)}</span>
-                  </div>
-                </Card>
-              </motion.div>
-            )}
+            </Card>
           </div>
 
-          {/* Right: Details */}
-          <div className="space-y-6">
-            <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-              <h3 className="text-sm font-bold uppercase tracking-widest text-text-muted mb-4">Play Style</h3>
-              <Card className="p-5 space-y-4">
-                <div className="flex justify-between items-center py-2 border-b border-border">
-                  <span className="text-xs text-text-muted">Style</span>
-                  <span className="text-sm font-bold capitalize">{player.playingStyle || '—'}</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-border">
-                  <span className="text-xs text-text-muted">Position</span>
-                  <span className="text-sm font-bold capitalize">{player.preferredPosition || '—'}</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-border">
-                  <span className="text-xs text-text-muted">Hand</span>
-                  <span className="text-sm font-bold capitalize">{player.dominantHand || '—'}</span>
-                </div>
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-xs text-text-muted">Mode</span>
-                  <span className="text-sm font-bold capitalize">{player.preferredMode || 'Both'}</span>
-                </div>
+          {/* Stats & Matches Column */}
+          <div className="md:col-span-2 space-y-6">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <TrendingUp size={20} className="text-accent" /> Player Stats
+            </h2>
+            <div className="grid grid-cols-3 gap-4">
+              <Card className="p-4 flex flex-col items-center justify-center text-center">
+                <Trophy size={24} className="text-yellow-500 mb-2" />
+                <p className="text-2xl font-bold text-white">{player.stats.wins}</p>
+                <p className="text-xs text-text-muted uppercase tracking-wider">Wins</p>
               </Card>
-            </motion.div>
+              <Card className="p-4 flex flex-col items-center justify-center text-center">
+                <TrendingUp size={24} className="text-blue-500 mb-2" />
+                <p className="text-2xl font-bold text-white">{player.stats.winRate}%</p>
+                <p className="text-xs text-text-muted uppercase tracking-wider">Win Rate</p>
+              </Card>
+              <Card className="p-4 flex flex-col items-center justify-center text-center">
+                <Shield size={24} className="text-accent/60 mb-2" />
+                <p className="text-2xl font-bold text-white">{player.stats.totalMatches}</p>
+                <p className="text-xs text-text-muted uppercase tracking-wider">Total Matches</p>
+              </Card>
+            </div>
 
-            {/* Availability */}
-            {(player.availability || []).length > 0 && (
-              <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-                <h3 className="text-sm font-bold uppercase tracking-widest text-text-muted mb-4 flex items-center gap-2">
-                  <Calendar size={14} /> Availability
-                </h3>
-                <Card className="p-5">
-                  <div className="flex flex-wrap gap-2">
-                    {(player.availability || []).map((a, i) => (
-                      <div key={i} className="px-3 py-1.5 bg-bg-elevated border border-border rounded-xl text-xs font-medium text-text-secondary">
-                        {a.day || a}{a.slots ? ` (${a.slots[0]})` : ''}
+            <h2 className="text-xl font-bold text-white mt-8 flex items-center gap-2">
+              <Calendar size={20} className="text-accent" /> Recent Matches
+            </h2>
+            {recentMatches.length === 0 ? (
+              <Card className="p-8 text-center border-dashed border-white/20">
+                <p className="text-text-muted">No completed matches found.</p>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {recentMatches.map(match => {
+                  const isTeam1 = match.team1Player1Id === player.id || match.team1Player2Id === player.id;
+                  const won = (isTeam1 && match.winnerId === 'team1') || (!isTeam1 && match.winnerId === 'team2');
+                  
+                  return (
+                    <Card key={match.id} className="p-4 flex items-center gap-4">
+                      <div className={`w-1.5 h-12 rounded-full ${won ? 'bg-success' : 'bg-red-500'}`} />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded ${won ? 'bg-success/20 text-success' : 'bg-red-500/20 text-red-500'}`}>
+                            {won ? 'VICTORY' : 'DEFEAT'}
+                          </span>
+                          <span className="text-xs text-text-muted">
+                            {new Date(match.completedAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <p className="text-sm font-semibold text-white">
+                          {match.booking?.court?.club?.name || 'Local Club'} - {match.booking?.court?.name || 'Court'}
+                        </p>
                       </div>
-                    ))}
-                  </div>
-                </Card>
-              </motion.div>
+                      <div className="text-right">
+                        <p className="text-xl font-bold font-mono text-white">
+                          {match.team1SetsScore} - {match.team2SetsScore}
+                        </p>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>

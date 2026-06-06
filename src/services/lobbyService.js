@@ -30,4 +30,19 @@ export const lobbyService = {
   // Log match result
   logResult: (matchId, setScores, winnerTeam) =>
     api.post(`/lobbies/matches/${matchId}/result`, { setScores, winnerTeam }),
+
+  // AI: get player suggestions for private match
+  aiSuggest: ({ count = 9, excludeIds = [], skillMin, skillMax, city, playingStyle, position } = {}) => {
+    const params = new URLSearchParams({ count, excludeIds: excludeIds.join(',') });
+    if (skillMin !== undefined) params.set('skillMin', skillMin);
+    if (skillMax !== undefined) params.set('skillMax', skillMax);
+    if (city)         params.set('city', city);
+    if (playingStyle) params.set('playingStyle', playingStyle);
+    if (position)     params.set('position', position);
+    return api.get(`/matchmaking/suggest?${params}`);
+  },
+
+  // AI: live search with match scores
+  aiSearch: (q, excludeIds = []) =>
+    api.get(`/matchmaking/search?q=${encodeURIComponent(q)}&excludeIds=${excludeIds.join(',')}&limit=8`),
 };

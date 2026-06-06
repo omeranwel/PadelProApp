@@ -147,3 +147,41 @@ export const removeFriend = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+// DELETE /api/friends/request/:requestId — cancel a sent pending request
+export const cancelRequest = async (req, res) => {
+  try {
+    const currentUser = await getDbUser(req.user.uid);
+    const request = await prisma.friendRequest.findUnique({ where: { id: req.params.requestId } });
+    if (!request) return res.status(404).json({ message: 'Request not found' });
+    if (request.senderId !== currentUser.id) return res.status(403).json({ message: 'Can only cancel your own requests' });
+    if (request.status !== 'PENDING') return res.status(400).json({ message: 'Request is no longer pending' });
+    await prisma.friendRequest.delete({ where: { id: request.id } });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// GET /api/friends/status/:userId — check friendship status with a specific user
+export const getFriendStatus = async (req, res) => {
+  try {
+    const currentUser = await getDbUser(req.user.uid);
+    const { userId } = req.params;
+
+    const [friendship, sent, received] = await Promise.all([
+      prisma.friendship.findFirst({
+        where: { OR: [{ userId: currentUser.id, friendId: userId }, { userId, friendId: currentUser.id }] },
+      }),
+      prisma.friendRequest.findFirst({ where: { senderId: currentUser.id, receiverId: userId, status: 'PENDING' } }),
+      prisma.friendRequest.findFirst({ where: { senderId: userId, receiverId: currentUser.id, status: 'PENDING' } }),
+    ]);
+
+    if (friendship) return res.json({ status: 'friends' });
+    if (sent)       return res.json({ status: 'request_sent', requestId: sent.id });
+    if (received)   return res.json({ status: 'request_received', requestId: received.id });
+    res.json({ status: 'none' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};

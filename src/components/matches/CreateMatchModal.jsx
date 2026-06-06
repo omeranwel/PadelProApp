@@ -9,6 +9,7 @@ import { lobbyService } from '../../services/lobbyService';
 import { playerService } from '../../services/playerService';
 import { useAuthStore } from '../../store/authStore';
 import toast from 'react-hot-toast';
+import { CreateMatchStep1 } from './CreateMatchStep1';
 
 const CITIES = ['Karachi', 'Lahore', 'Islamabad', 'Rawalpindi', 'Faisalabad'];
 const TIME_SLOTS = [
@@ -216,20 +217,13 @@ export default function CreateMatchModal({ onClose, onCreated }) {
 
                 {/* PRIVATE: Step 0 — Select 3 players */}
                 {mode === 'PRIVATE' && step === 0 && (
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="font-bold text-white mb-1">Select 3 Players to Invite</h3>
-                      <p className="text-xs text-text-muted mb-4">You (Slot 1) + 3 players = 4 total</p>
-                      <PlayerSearchInput onSelect={addPlayer} excludeIds={[currentUser?.id, ...selectedPlayers.map(p => p.id)]} />
-                    </div>
-                    <div className="space-y-2">
-                      <LobbySlot slot={1} player={{ name: currentUser?.name || 'You', avatarUrl: currentUser?.avatarUrl, skillLevel: 'You' }} isYou />
-                      {[0, 1, 2].map(i => (
-                        <LobbySlot key={i} slot={i + 2} player={selectedPlayers[i] || null}
-                          onRemove={selectedPlayers[i] ? () => setSelectedPlayers(selectedPlayers.filter((_, j) => j !== i)) : null} />
-                      ))}
-                    </div>
-                  </div>
+                  <CreateMatchStep1
+                    currentUser={currentUser}
+                    onPlayersConfirmed={(slots) => {
+                      setSelectedPlayers(slots.filter(Boolean));
+                      setStep(1);
+                    }}
+                  />
                 )}
 
                 {/* Preferences step (PRIVATE step 1, OPEN step 0) */}
@@ -332,7 +326,7 @@ export default function CreateMatchModal({ onClose, onCreated }) {
         </div>
 
         {/* Footer buttons */}
-        {mode && (
+        {mode && !(mode === 'PRIVATE' && step === 0) && (
           <div className="px-6 pb-6 flex gap-3">
             <Button variant="secondary" onClick={() => step === 0 ? setMode(null) : setStep(s => s - 1)} className="flex-1">
               ← Back
