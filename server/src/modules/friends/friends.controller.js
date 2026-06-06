@@ -15,14 +15,23 @@ export const sendRequest = async (req, res) => {
     if (existing) return res.status(409).json({ message: 'Already friends' });
 
     const existingReq = await prisma.friendRequest.findFirst({
-      where: { senderId: sender.id, receiverId: targetUserId, status: 'PENDING' },
+      where: { senderId: sender.id, receiverId: targetUserId },
     });
-    if (existingReq) return res.status(409).json({ message: 'Request already sent' });
+    if (existingReq && existingReq.status === 'PENDING') return res.status(409).json({ message: 'Request already sent' });
 
-    const request = await prisma.friendRequest.create({
-      data: { senderId: sender.id, receiverId: targetUserId },
-      include: { sender: { select: { name: true, avatarUrl: true } } },
-    });
+    let request;
+    if (existingReq) {
+      request = await prisma.friendRequest.update({
+        where: { id: existingReq.id },
+        data: { status: 'PENDING' },
+        include: { sender: { select: { name: true, avatarUrl: true } } },
+      });
+    } else {
+      request = await prisma.friendRequest.create({
+        data: { senderId: sender.id, receiverId: targetUserId },
+        include: { sender: { select: { name: true, avatarUrl: true } } },
+      });
+    }
 
     await prisma.notification.create({
       data: {
