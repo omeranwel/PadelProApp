@@ -1,4 +1,5 @@
 import * as service from './players.service.js';
+import prisma from '../../config/db.js';
 
 export const getPlayers = async (req,res,next) => {
   try { res.json(await service.getPlayers(req.user.id, req.query)); } catch(err){next(err);}
@@ -29,10 +30,10 @@ export const getMyStats = async (req,res,next) => {
 export const suggestPlayers = async (req, res, next) => {
   try {
     const { query = '', excludeIds = '' } = req.query;
-    const exclude = excludeIds ? excludeIds.split(',') : [];
+    const exclude = excludeIds ? excludeIds.split(',').filter(Boolean) : [];
     exclude.push(req.user.id); // never suggest self
 
-    const players = await (await import('../../config/db.js')).default.user.findMany({
+    const players = await prisma.user.findMany({
       where: {
         role: 'PLAYER',
         matchmakingEnabled: true,

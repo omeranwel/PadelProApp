@@ -16,9 +16,12 @@ const safePlayerSelect = {
 };
 
 export const getPlayers = async (requestingUserId, filters = {}) => {
-  const { skillLevel, maxDistance } = filters;
+  const { skillLevel, maxDistance, name, city, playingStyle } = filters;
   const where = { role: 'PLAYER', id: { not: requestingUserId }, matchmakingEnabled: true };
   if (skillLevel) where.skillLevel = { in: skillLevel.split(',') };
+  if (name)        where.name = { contains: name, mode: 'insensitive' };
+  if (city)        where.city = { contains: city, mode: 'insensitive' };
+  if (playingStyle) where.playingStyle = playingStyle;
 
   const [players, requestingUser, friendships, sentRequests, receivedRequests] = await Promise.all([
     prisma.user.findMany({ where, select: safePlayerSelect }),

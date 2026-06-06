@@ -67,6 +67,7 @@ const Navbar = () => {
   const navLinks = [
     { name: 'Courts', path: '/courts' },
     { name: 'Matches', path: '/matches' },
+    { name: 'Players', path: '/players' },
     { name: 'Market', path: '/market' },
     { name: 'Ladder', path: '/leaderboard' },
     { name: 'Tournaments', path: '/tournaments' },

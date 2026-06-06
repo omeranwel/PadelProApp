@@ -1,8 +1,8 @@
 import express from 'express';
-import { verifyToken } from '../middleware/auth.js';
-import { getDbUser } from '../utils/getDbUser.js';
-import { balanceTeams } from '../services/teamBalancer.js';
-import prisma from '../config/db.js';
+import { verifyToken } from '../../middleware/auth.js';
+import { getDbUser } from '../../utils/getDbUser.js';
+import { balanceTeams } from '../../services/teamBalancer.js';
+import prisma from '../../config/db.js';
 
 const router = express.Router();
 
