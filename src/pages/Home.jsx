@@ -71,13 +71,13 @@ const Home = () => {
     <PageWrapper>
       {/* HERO */}
       <section className="relative min-h-screen flex items-center pt-24 pb-16 px-6 overflow-hidden">
-        <div className="absolute inset-0 -z-20">
-          <img src="https://images.unsplash.com/photo-1622279457486-69d73ce18722?q=80&w=2070&auto=format&fit=crop" alt="Padel Court" className="w-full h-full object-cover opacity-[0.4]" />
+        <div className="absolute inset-0 z-0">
+          <img src="/hero-bg.png" alt="Padel Court" className="w-full h-full object-cover opacity-[0.4]" />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-bg-base/60 to-bg-base" />
         </div>
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-accent/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-accent/10 rounded-full blur-[120px] pointer-events-none z-0" />
 
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center w-full">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center w-full relative z-10">
           <motion.div initial={{ opacity: 0, x: -40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }}>
             <div className="flex items-center gap-2 mb-6">
               <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
@@ -281,12 +281,12 @@ const Home = () => {
 
       {/* CTA */}
       <section className="py-32 px-6 relative overflow-hidden">
-        <div className="absolute inset-0 -z-20">
-          <img src="https://images.unsplash.com/photo-1622279457486-69d73ce18722?q=80&w=2070&auto=format&fit=crop" alt="Padel Court" className="w-full h-full object-cover opacity-[0.35]" />
+        <div className="absolute inset-0 z-0">
+          <img src="/hero-bg.png" alt="Padel Court" className="w-full h-full object-cover opacity-[0.35]" />
           <div className="absolute inset-0 bg-gradient-to-t from-bg-base via-bg-base/60 to-transparent" />
         </div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-accent/10 rounded-full blur-[120px] -z-10" />
-        <div className="max-w-4xl mx-auto text-center">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-accent/10 rounded-full blur-[120px] z-0" />
+        <div className="max-w-4xl mx-auto text-center relative z-10">
           <span className="text-xs font-bold uppercase tracking-[0.3em] text-accent mb-4 block">Ready to Play?</span>
           <h2 className="text-6xl md:text-9xl font-display mb-8">TAKE<br />THE COURT</h2>
           <p className="text-text-secondary text-xl mb-12 font-body">Join 800+ Karachi players already using PadelPro to transform their game.</p>
