@@ -256,7 +256,7 @@ const PlayerCard = ({
                 onClick={handleChallenge}
                 disabled={status === 'friends' || status === 'request_sent'}
               >
-                {status === 'friends' ? 'Friends' : status === 'request_sent' ? 'Sent ✓' : 'Challenge'}
+                {status === 'friends' ? 'Friends' : status === 'request_sent' ? 'Sent ✓' : 'Invite to Match'}
               </Button>
               <Button
                 variant="secondary"

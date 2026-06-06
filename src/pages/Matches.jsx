@@ -101,13 +101,12 @@ const Matches = () => {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-12">
           <div className="flex-1">
             <Badge variant="ai" className="mb-4 py-1.5 px-4 text-xs">AI SMART MATCHING</Badge>
-            <h1 className="text-5xl font-bold font-display mb-6 leading-tight">
+            <h1 className="text-5xl font-bold font-display mb-6 leading-tight text-white">
               Finding Your Perfect{' '}
-              <span className="text-ai-purple underline decoration-ai-purple/30 underline-offset-8">Padel Partner</span>
+              <span className="text-ai-purple underline decoration-ai-purple/30 underline-offset-8">Padel Foursome</span>
             </h1>
             <p className="text-text-secondary text-xl mb-10 max-w-xl">
-              Our intelligent algorithm pairs you based on skill level, location, play-style, and schedule.
-              No more unbalanced games.
+              Padel is a 4-player game. Our intelligent AI algorithm finds 3 highly compatible players to complete your match based on skill level, location, and play-style.
             </p>
             {!showResults && !isAiMatching && (
               <div className="flex flex-col sm:flex-row gap-4">
@@ -190,8 +189,8 @@ const Matches = () => {
                   <UserCheck size={32} />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-bold font-display">Optimization Complete</h3>
-                  <p className="text-text-secondary">Showing top matches sorted by compatibility score.</p>
+                  <h3 className="text-2xl font-bold font-display text-white">Match Found: Your Foursome is Ready</h3>
+                  <p className="text-text-secondary">Showing your 3 most compatible players to complete the match.</p>
                 </div>
               </div>
               <Button variant="outline" className="border-ai-purple text-ai-purple hover:bg-ai-purple/10" onClick={() => setShowResults(false)}>
@@ -202,43 +201,45 @@ const Matches = () => {
 
           <div className="flex flex-col md:flex-row gap-8">
             {/* Sidebar Filters */}
-            <aside className="w-full md:w-64 space-y-8 shrink-0">
-              <div className="space-y-3">
-                <h4 className="font-bold text-sm uppercase tracking-widest text-text-muted flex items-center gap-2">
-                  <Filter size={13} /> Skill Level
-                </h4>
-                <div className="space-y-2">
-                  {SKILL_LEVELS.map(l => (
-                    <label key={l} className="flex items-center gap-3 cursor-pointer group">
-                      <input type="checkbox" className="hidden" onChange={() => toggleSkill(l.toLowerCase())} checked={skillFilter.includes(l.toLowerCase())} />
-                      <div className={`w-5 h-5 border-2 rounded flex items-center justify-center transition-colors ${skillFilter.includes(l.toLowerCase()) ? 'border-accent-blue bg-accent-blue/10' : 'border-border group-hover:border-accent-blue'}`}>
-                        {skillFilter.includes(l.toLowerCase()) && <div className="w-2.5 h-2.5 bg-accent-blue rounded-sm" />}
-                      </div>
-                      <span className="text-sm font-medium text-text-secondary group-hover:text-text-primary">{l}</span>
-                    </label>
-                  ))}
+            <aside className="w-full md:w-64 space-y-6 shrink-0">
+              <Card className="p-5 space-y-8">
+                <div className="space-y-3">
+                  <h4 className="font-bold text-sm uppercase tracking-widest text-text-muted flex items-center gap-2">
+                    <Filter size={13} /> Skill Level
+                  </h4>
+                  <div className="space-y-2">
+                    {SKILL_LEVELS.map(l => (
+                      <label key={l} className="flex items-center gap-3 cursor-pointer group">
+                        <input type="checkbox" className="hidden" onChange={() => toggleSkill(l.toLowerCase())} checked={skillFilter.includes(l.toLowerCase())} />
+                        <div className={`w-5 h-5 border-2 rounded flex items-center justify-center transition-colors ${skillFilter.includes(l.toLowerCase()) ? 'border-accent-blue bg-accent-blue/10' : 'border-white/20 bg-bg-base/50 group-hover:border-accent-blue'}`}>
+                          {skillFilter.includes(l.toLowerCase()) && <div className="w-2.5 h-2.5 bg-accent-blue rounded-sm" />}
+                        </div>
+                        <span className="text-sm font-medium text-text-secondary group-hover:text-text-primary">{l}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              {/* City filter — replaces the useless distance slider */}
-              <div className="space-y-3">
-                <h4 className="font-bold text-sm uppercase tracking-widest text-text-muted">City</h4>
-                <div className="space-y-1.5">
-                  {CITIES.map(city => (
-                    <button
-                      key={city}
-                      onClick={() => setCityFilter(city)}
-                      className={`w-full text-left px-3 py-2 rounded-xl text-sm font-medium transition-all ${
-                        cityFilter === city
-                          ? 'bg-accent/10 text-accent border border-accent/20'
-                          : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
-                      }`}
-                    >
-                      {city}
-                    </button>
-                  ))}
+                {/* City filter */}
+                <div className="space-y-3">
+                  <h4 className="font-bold text-sm uppercase tracking-widest text-text-muted">City</h4>
+                  <div className="space-y-1.5">
+                    {CITIES.map(city => (
+                      <button
+                        key={city}
+                        onClick={() => setCityFilter(city)}
+                        className={`w-full text-left px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+                          cityFilter === city
+                            ? 'bg-accent/10 text-accent border border-accent/20'
+                            : 'text-text-secondary hover:text-white hover:bg-white/5 border border-transparent'
+                        }`}
+                      >
+                        {city}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              </Card>
 
               <Card className="p-5 border-dashed border-border-strong bg-transparent text-center">
                 <p className="text-xs text-text-muted mb-3 italic">"I usually play in Clifton and DHA area. Looking for morning games."</p>
@@ -294,7 +295,7 @@ const Matches = () => {
                     </div>
                   ) : (
                     filteredPlayers.slice(0, 12).map((p, i) => (
-                      <PlayerCard key={p.id} player={p} isMatch={showResults && i < 2} />
+                      <PlayerCard key={p.id} player={p} isMatch={showResults && i < 3} />
                     ))
                   )}
                 </div>
