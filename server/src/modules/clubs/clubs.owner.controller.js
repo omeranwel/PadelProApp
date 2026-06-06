@@ -199,3 +199,48 @@ export const addCourt = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+// GET /api/clubs/tournaments
+export const getClubTournaments = async (req, res) => {
+  try {
+    const dbUser = await getDbUser(req.user.uid);
+    const tournaments = await prisma.tournament.findMany({
+      where: { organizerId: dbUser.id },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json({ tournaments });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// POST /api/clubs/tournaments
+export const addTournament = async (req, res) => {
+  try {
+    const dbUser = await getDbUser(req.user.uid);
+    const { name, description, startDate, endDate, registrationDeadline, format, skillLevel, maxParticipants, entryFee, prizePool } = req.body;
+    
+    if (!name || !startDate || !endDate) return res.status(400).json({ message: 'Missing required fields' });
+
+    const tournament = await prisma.tournament.create({
+      data: {
+        name,
+        description: description || '',
+        startDate: new Date(startDate),
+        endDate: new Date(endDate),
+        registrationDeadline: new Date(registrationDeadline || startDate),
+        format: format || 'knockout',
+        skillLevel: skillLevel || 'open',
+        maxParticipants: parseInt(maxParticipants) || 16,
+        entryFee: parseInt(entryFee) || 0,
+        prizePool: parseInt(prizePool) || 0,
+        organizerId: dbUser.id,
+        city: 'Karachi' // Default
+      }
+    });
+
+    res.status(201).json({ success: true, tournament });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};

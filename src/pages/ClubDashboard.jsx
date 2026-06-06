@@ -17,7 +17,7 @@ import { useAuthStore } from '../store/authStore';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
-const TABS = ['Overview', 'Bookings', 'Players', 'Settings'];
+const TABS = ['Overview', 'Bookings', 'Players', 'Tournaments', 'Settings'];
 
 export default function ClubDashboard() {
   const { user } = useAuthStore();
@@ -28,6 +28,7 @@ export default function ClubDashboard() {
   const [dashboardData, setDashboardData] = useState(null);
   const [bookings, setBookings] = useState({ data: [], total: 0, page: 1 });
   const [players, setPlayers] = useState([]);
+  const [tournaments, setTournaments] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Modals
@@ -37,6 +38,12 @@ export default function ClubDashboard() {
   
   const [isAddCourtModalOpen, setIsAddCourtModalOpen] = useState(false);
   const [newCourt, setNewCourt] = useState({ name: '', surface: 'Indoor', pricePerHour: '', description: '' });
+
+  const [isTournamentModalOpen, setIsTournamentModalOpen] = useState(false);
+  const [newTournament, setNewTournament] = useState({ 
+    name: '', description: '', startDate: '', endDate: '', 
+    format: 'knockout', skillLevel: 'open', maxParticipants: 16, entryFee: 0, prizePool: 0 
+  });
 
   useEffect(() => {
     // Wait for user to be hydrated; don't redirect if user is null yet
@@ -49,8 +56,15 @@ export default function ClubDashboard() {
   useEffect(() => {
     if (activeTab === 'Bookings') loadBookings();
     else if (activeTab === 'Players') loadPlayers();
+    else if (activeTab === 'Tournaments') loadTournaments();
   }, [activeTab]);
 
+  const loadTournaments = async () => {
+    try {
+      const data = await api.get('/clubs/tournaments');
+      setTournaments(data.tournaments || []);
+    } catch { toast.error('Failed to load tournaments'); }
+  };
   const loadDashboard = async () => {
     setLoading(true);
     try {
@@ -110,6 +124,16 @@ export default function ClubDashboard() {
       toast.success('Court added successfully!');
       setIsAddCourtModalOpen(false);
       setNewCourt({ name: '', surface: 'Indoor', pricePerHour: '', description: '' });
+      loadDashboard();
+    } catch (err) { toast.error(err.message); }
+  };
+
+  const handleCreateTournament = async () => {
+    if (!newTournament.name || !newTournament.startDate || !newTournament.endDate) return toast.error('Name and dates are required');
+    try {
+      await api.post('/clubs/tournaments', newTournament);
+      toast.success('Tournament created successfully!');
+      setIsTournamentModalOpen(false);
       loadDashboard();
     } catch (err) { toast.error(err.message); }
   };
@@ -310,7 +334,7 @@ export default function ClubDashboard() {
                         <th className="py-4 pl-6 pr-4 font-semibold">Player</th>
                         <th className="py-4 pr-4 font-semibold">Skill Level</th>
                         <th className="py-4 pr-4 font-semibold">Total Visits</th>
-                        <th className="py-4 pr-6 font-semibold">Total Spent</th>
+                        <th className="py-4 pr-6 font-semibold text-right">Total Spent</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -327,13 +351,68 @@ export default function ClubDashboard() {
                           </td>
                           <td className="py-4 pr-4 text-sm text-text-secondary">{p.skillLevel}</td>
                           <td className="py-4 pr-4 text-sm font-bold">{p.visits}</td>
-                          <td className="py-4 pr-6 text-sm font-bold text-success">Rs {p.totalSpent}</td>
+                          <td className="py-4 pr-6 text-sm font-bold text-success text-right">Rs {p.totalSpent}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                   {players.length === 0 && <div className="text-center py-12 text-text-muted">No players have booked your club yet.</div>}
                 </Card>
+              </div>
+            )}
+
+            {/* Tournaments Tab */}
+            {activeTab === 'Tournaments' && (
+              <div className="space-y-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-xl font-bold font-display">Manage Tournaments</h3>
+                  <Button icon={Plus} onClick={() => setIsTournamentModalOpen(true)}>Create Tournament</Button>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {tournaments.map(t => (
+                    <Card key={t.id} className="p-6 border border-border flex flex-col h-full">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h4 className="font-bold text-lg">{t.name}</h4>
+                          <p className="text-sm text-text-muted flex items-center gap-1 mt-1"><Calendar size={14}/> {new Date(t.startDate).toLocaleDateString()} - {new Date(t.endDate).toLocaleDateString()}</p>
+                        </div>
+                        <Badge variant={t.status === 'upcoming' ? 'blue' : t.status === 'ongoing' ? 'green' : 'gray'}>
+                          {t.status.toUpperCase()}
+                        </Badge>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4 my-6 flex-1">
+                        <div>
+                          <p className="text-xs text-text-muted uppercase font-bold tracking-wider">Entry Fee</p>
+                          <p className="font-mono text-text-primary">Rs {t.entryFee.toLocaleString()}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-text-muted uppercase font-bold tracking-wider">Prize Pool</p>
+                          <p className="font-mono text-success font-bold">Rs {t.prizePool.toLocaleString()}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-text-muted uppercase font-bold tracking-wider">Format</p>
+                          <p className="font-medium capitalize">{t.format}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-text-muted uppercase font-bold tracking-wider">Players</p>
+                          <p className="font-medium">{t.participants?.length || 0} / {t.maxParticipants}</p>
+                        </div>
+                      </div>
+                      
+                      <Button variant="outline" className="w-full">Manage Bracket</Button>
+                    </Card>
+                  ))}
+                  
+                  {tournaments.length === 0 && (
+                    <div className="col-span-full py-16 text-center text-text-muted border border-dashed border-border rounded-3xl bg-bg-elevated/30">
+                      <Trophy size={40} className="mx-auto mb-4 opacity-30 text-accent" />
+                      <p className="mb-2">No tournaments created yet.</p>
+                      <Button variant="link" className="mt-2 text-accent p-0 h-auto" onClick={() => setIsTournamentModalOpen(true)}>Create your first tournament</Button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -384,6 +463,50 @@ export default function ClubDashboard() {
               <Button variant="secondary" onClick={() => setIsAddCourtModalOpen(false)} className="flex-1">Cancel</Button>
               <Button onClick={handleAddCourt} className="flex-1" icon={Plus}>Add Court</Button>
             </div>
+          </div>
+        </Modal>
+
+        {/* Create Tournament Modal */}
+        <Modal isOpen={isTournamentModalOpen} onClose={() => setIsTournamentModalOpen(false)} className="max-w-2xl">
+          <h3 className="text-2xl font-bold font-display mb-6">Create Tournament</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2">
+              <Input label="Tournament Name" placeholder="e.g. Summer Smash 2026" value={newTournament.name} onChange={e => setNewTournament({...newTournament, name: e.target.value})} />
+            </div>
+            <div className="md:col-span-2">
+              <Input label="Description" placeholder="Rules, schedule details, etc." value={newTournament.description} onChange={e => setNewTournament({...newTournament, description: e.target.value})} />
+            </div>
+            <Input label="Start Date" type="date" value={newTournament.startDate} onChange={e => setNewTournament({...newTournament, startDate: e.target.value})} />
+            <Input label="End Date" type="date" value={newTournament.endDate} onChange={e => setNewTournament({...newTournament, endDate: e.target.value})} />
+            
+            <div className="space-y-1">
+              <label className="block text-xs font-bold uppercase tracking-wider text-text-muted pl-1">Format</label>
+              <select className="w-full bg-bg-elevated border border-border rounded-xl px-4 py-3 text-text-primary outline-none" value={newTournament.format} onChange={e => setNewTournament({...newTournament, format: e.target.value})}>
+                <option value="knockout">Knockout</option>
+                <option value="round_robin">Round Robin</option>
+                <option value="groups">Groups + Knockout</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs font-bold uppercase tracking-wider text-text-muted pl-1">Skill Level</label>
+              <select className="w-full bg-bg-elevated border border-border rounded-xl px-4 py-3 text-text-primary outline-none" value={newTournament.skillLevel} onChange={e => setNewTournament({...newTournament, skillLevel: e.target.value})}>
+                <option value="open">Open to All</option>
+                <option value="beginner">Beginner Only</option>
+                <option value="intermediate">Intermediate</option>
+                <option value="advanced">Advanced</option>
+              </select>
+            </div>
+            
+            <Input label="Max Players" type="number" value={newTournament.maxParticipants} onChange={e => setNewTournament({...newTournament, maxParticipants: e.target.value})} />
+            <Input label="Entry Fee (Rs)" type="number" value={newTournament.entryFee} onChange={e => setNewTournament({...newTournament, entryFee: e.target.value})} />
+            <div className="md:col-span-2">
+              <Input label="Prize Pool (Rs)" type="number" value={newTournament.prizePool} onChange={e => setNewTournament({...newTournament, prizePool: e.target.value})} />
+            </div>
+          </div>
+          
+          <div className="flex gap-4 pt-6 mt-6 border-t border-border">
+            <Button variant="secondary" onClick={() => setIsTournamentModalOpen(false)} className="flex-1">Cancel</Button>
+            <Button onClick={handleCreateTournament} className="flex-1" icon={Trophy}>Launch Tournament</Button>
           </div>
         </Modal>
 
