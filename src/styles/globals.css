@@ -24,15 +24,17 @@
   --color-accent-blue: #3B82F6;
   --color-accent-blue-glow: rgba(59, 130, 246, 0.15);
 
-  --color-accent-orange: #F97316;
-  --color-accent-orange-glow: rgba(249, 115, 22, 0.15);
+  /* Changed from Orange to a neon Cyan/Teal to match the sporty look */
+  --color-accent-orange: #00E5FF;
+  --color-accent-orange-glow: rgba(0, 229, 255, 0.15);
 
   --color-success: #00E676;
   --color-danger: #EF4444;
-  --color-warning: #F59E0B;
+  --color-warning: #00E5FF;
 
-  --color-ai-purple: #8B5CF6;
-  --color-ai-purple-glow: rgba(139, 92, 246, 0.15);
+  /* Changed from Purple to another shade of Blue/Green */
+  --color-ai-purple: #06B6D4;
+  --color-ai-purple-glow: rgba(6, 182, 212, 0.15);
 
   --font-display: "Bebas Neue", sans-serif;
   --font-body: "DM Sans", sans-serif;
@@ -88,8 +90,8 @@ input, textarea, select {
 /* Skill badges */
 .badge-beginner     { background:rgba(59,130,246,0.12); color:#60A5FA; border:1px solid rgba(59,130,246,0.25); }
 .badge-intermediate { background:rgba(0,230,118,0.10); color:#00E676; border:1px solid rgba(0,230,118,0.25); }
-.badge-advanced     { background:rgba(249,115,22,0.10); color:#FB923C; border:1px solid rgba(249,115,22,0.25); }
-.badge-professional { background:rgba(139,92,246,0.12); color:#A78BFA; border:1px solid rgba(139,92,246,0.25); }
+.badge-advanced     { background:rgba(0,229,255,0.10); color:#00E5FF; border:1px solid rgba(0,229,255,0.25); }
+.badge-professional { background:rgba(6,182,212,0.12); color:#22D3EE; border:1px solid rgba(6,182,212,0.25); }
 
 /* Recharts tooltip override */
 .recharts-tooltip-wrapper .recharts-default-tooltip {
