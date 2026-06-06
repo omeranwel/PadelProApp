@@ -111,7 +111,7 @@ const CourtDetail = () => {
   ];
 
   return (
-    <PageWrapper>
+    <PageWrapper bg="/hero-bg.png">
       {courtLoading || !court ? (
         <div className="h-screen flex items-center justify-center">
           <Spinner size="lg" />

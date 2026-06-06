@@ -63,7 +63,7 @@ const Courts = () => {
   }, [courts, searchQuery, filters, sortBy]);
 
   return (
-    <PageWrapper>
+    <PageWrapper bg="/hero-bg.png">
       {/* Search Hero */}
       <section className="bg-bg-card border-b border-border py-12 px-6">
         <div className="max-w-7xl mx-auto">

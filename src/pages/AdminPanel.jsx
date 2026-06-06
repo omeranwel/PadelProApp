@@ -149,7 +149,7 @@ export default function AdminPanel() {
   if (user?.role !== 'APP_ADMIN') return null;
 
   return (
-    <PageWrapper>
+    <PageWrapper bg="/bg-courts.png">
       <div className="max-w-7xl mx-auto px-6 pb-24">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">

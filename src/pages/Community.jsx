@@ -175,7 +175,7 @@ const Community = () => {
   ];
 
   return (
-    <PageWrapper>
+    <PageWrapper bg="/bg-player.png">
       {/* Community Header */}
       <section className="bg-bg-card border-b border-border py-16 px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">

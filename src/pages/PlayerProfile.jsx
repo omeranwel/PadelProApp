@@ -109,7 +109,7 @@ export default function PlayerProfile() {
   };
 
   if (loading) return (
-    <PageWrapper>
+    <PageWrapper bg="/bg-player.png">
       <div className="flex items-center justify-center min-h-[60vh]">
         <Spinner size="lg" />
       </div>
@@ -117,7 +117,7 @@ export default function PlayerProfile() {
   );
 
   if (!player) return (
-    <PageWrapper>
+    <PageWrapper bg="/bg-player.png">
       <div className="text-center py-24 text-text-muted">Player not found.</div>
     </PageWrapper>
   );
@@ -133,7 +133,7 @@ export default function PlayerProfile() {
   }[friendStatus] || 'Challenge';
 
   return (
-    <PageWrapper>
+    <PageWrapper bg="/bg-player.png">
       <div className="max-w-4xl mx-auto px-6 pb-24">
         {/* Back */}
         <button

@@ -77,7 +77,7 @@ const Leaderboard = () => {
   const rest = sorted.slice(3);
 
   return (
-    <PageWrapper>
+    <PageWrapper bg="/bg-courts.png">
       <section className="relative py-16 px-6 overflow-hidden border-b border-border">
         <div className="absolute inset-0 court-bg opacity-50" />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-accent/5 rounded-full blur-3xl pointer-events-none" />

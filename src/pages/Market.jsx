@@ -59,7 +59,7 @@ const Market = () => {
   };
 
   return (
-    <PageWrapper>
+    <PageWrapper bg="/bg-courts.png">
       {/* Market Header */}
       <section className="bg-[radial-gradient(circle_at_50%_100%,_#1E1B10_0%,_#09090F_100%)] border-b border-border py-16 px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-end gap-8">

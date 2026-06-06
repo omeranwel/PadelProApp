@@ -100,7 +100,7 @@ const Bookings = () => {
   };
 
   return (
-    <PageWrapper>
+    <PageWrapper bg="/hero-bg.png">
       <div className="max-w-5xl mx-auto px-6 pb-24">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-12">

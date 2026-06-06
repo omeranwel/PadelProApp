@@ -94,7 +94,7 @@ const Matches = () => {
   }, [skillFilter, cityFilter, suggestions]);
 
   return (
-    <PageWrapper>
+    <PageWrapper bg="/bg-player.png">
       {/* Hero */}
       <section className="bg-[radial-gradient(circle_at_20%_0%,_#1E1030_0%,_#09090F_100%)] border-b border-border py-16 px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-12">

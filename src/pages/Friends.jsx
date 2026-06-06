@@ -85,7 +85,7 @@ const Friends = () => {
   const filteredFriends = friends.filter(f => f.name?.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <PageWrapper>
+    <PageWrapper bg="/bg-player.png">
       <div className="max-w-4xl mx-auto px-6 py-12">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-10">
           <div>

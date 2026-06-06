@@ -73,7 +73,7 @@ export default function ClubRegister() {
   };
 
   return (
-    <PageWrapper>
+    <PageWrapper bg="/bg-courts.png">
       <div className="max-w-3xl mx-auto px-6 py-12">
         <div className="text-center mb-10">
           <Badge variant="blue" className="mb-4">PARTNER PROGRAM</Badge>

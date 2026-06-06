@@ -138,7 +138,7 @@ const Tournaments = () => {
   const filtered = filter==='all' ? tournaments : tournaments.filter(t=>t.status===filter);
 
   return (
-    <PageWrapper>
+    <PageWrapper bg="/bg-night.png">
       <section className="relative py-16 px-6 overflow-hidden border-b border-border">
         <div className="absolute inset-0 court-bg opacity-40" />
         <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-accent-orange/5 rounded-full blur-3xl pointer-events-none" />

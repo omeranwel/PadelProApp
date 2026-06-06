@@ -95,7 +95,7 @@ const Dashboard = () => {
   if (!user) return null;
 
   return (
-    <PageWrapper>
+    <PageWrapper bg="/bg-night.png">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-28">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10 pt-2">
           <div>

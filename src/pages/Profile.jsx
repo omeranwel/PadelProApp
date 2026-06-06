@@ -82,7 +82,7 @@ const Profile = () => {
   ];
 
   return (
-    <PageWrapper>
+    <PageWrapper bg="/bg-night.png">
       <div className="max-w-7xl mx-auto px-6 pb-24">
         <h1 className="text-4xl font-bold font-display mb-12">Account Settings</h1>
 
